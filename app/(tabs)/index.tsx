@@ -1,98 +1,145 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+
+const POSTS = [
+  {
+    id: '1',
+    user: 'nature_lens',
+    location: 'Yosemite Valley',
+    image: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=950&q=80',
+    likes: 1245,
+    caption: 'A perfect sunset after a long hike.',
+  },
+  {
+    id: '2',
+    user: 'urban.tales',
+    location: 'Downtown',
+    image: 'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=950&q=80',
+    likes: 843,
+    caption: 'City lights and neon nights.',
+  },
+  {
+    id: '3',
+    user: 'coffeetime',
+    location: 'Local cafe',
+    image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=950&q=80',
+    likes: 679,
+    caption: 'Best way to start the day.',
+  },
+];
+
+function PostCard({post}: {post: typeof POSTS[number]}) {
+  return (
+    <View style={styles.postCard}>
+      <View style={styles.postHeader}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{post.user[0].toUpperCase()}</Text>
+        </View>
+        <View style={styles.postDetails}>
+          <ThemedText type="subtitle" style={styles.username}>{post.user}</ThemedText>
+          <Text style={styles.location}>{post.location}</Text>
+        </View>
+      </View>
+      <Image source={{ uri: post.image }} style={styles.postImage} />
+      <View style={styles.postFooter}>
+        <Text style={styles.likes}>{post.likes.toLocaleString()} likes</Text>
+        <Text style={styles.caption}><Text style={styles.username}>{post.user}</Text> {post.caption}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>insta-clone</Text>
+        <Text style={styles.subtitle}>mockup feed</Text>
+      </View>
+      <ScrollView contentContainerStyle={styles.feed}>
+        {POSTS.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '900',
+    textTransform: 'lowercase',
+  },
+  subtitle: {
+    color: '#555',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  feed: {
+    padding: 12,
+    gap: 16,
+  },
+  postCard: {
+    backgroundColor: '#fff',
+    borderColor: '#eee',
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    padding: 10,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  avatarText: {
+    fontWeight: '700',
+  },
+  postDetails: {
+    marginLeft: 10,
+  },
+  username: {
+    fontWeight: '700',
+  },
+  location: {
+    fontSize: 12,
+    color: '#666',
+  },
+  postImage: {
+    width: '100%',
+    height: 260,
+    backgroundColor: '#f3f3f3',
+  },
+  postFooter: {
+    padding: 10,
+  },
+  likes: {
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  caption: {
+    color: '#333',
   },
 });
