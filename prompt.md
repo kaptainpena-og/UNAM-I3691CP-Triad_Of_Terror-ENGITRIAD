@@ -22,28 +22,47 @@ The project scaffold is as follows. **Every file you create or edit must have a 
 
 ```
 C:.  (project root: UNAM-I3691CP-Group8-ENGITRIAD)
+C:.
 │   .gitignore
 │   app.json
 │   eslint.config.js
+│   expo-env.d.ts
 │   package-lock.json
 │   package.json
+│   prompt.md
 │   README.md
 │   SRS.pdf
 │   tsconfig.json
-│
+│   
+├───.anima
+│   └───cache
+│           f37c950882acc9d846379b779dc73d2903b6ccab7f02cfc5aa93450395bde981
+│           
+├───.expo
+│   │   devices.json
+│   │   README.md
+│   │   
+│   └───types
+│           router.d.ts
+│           
 ├───.vscode
 │       extensions.json
 │       settings.json
-│
+│       
 ├───app
-│   │   modal.tsx              ← Global modal screen
-│   │   _layout.tsx            ← Root layout (auth guard lives here)
-│   │
+│   │   modal.tsx
+│   │   _layout.tsx
+│   │   
+│   ├───(auth)
+│   │       login.tsx
+│   │       signup.tsx
+│   │       _layout.tsx
+│   │       
 │   └───(tabs)
-│           explore.tsx        ← REPLACE: becomes Departments/Home screen
-│           index.tsx          ← REPLACE: becomes Welcome screen
-│           _layout.tsx        ← Tab navigator (3 module tabs)
-│
+│           explore.tsx
+│           index.tsx
+│           _layout.tsx
+│           
 ├───assets
 │   └───images
 │           android-icon-background.png
@@ -51,9 +70,12 @@ C:.  (project root: UNAM-I3691CP-Group8-ENGITRIAD)
 │           android-icon-monochrome.png
 │           favicon.png
 │           icon.png
+│           partial-react-logo.png
+│           react-logo.png
+│           react-logo@2x.png
+│           react-logo@3x.png
 │           splash-icon.png
-│           (... other images)
-│
+│           
 ├───components
 │   │   external-link.tsx
 │   │   haptic-tab.tsx
@@ -61,20 +83,20 @@ C:.  (project root: UNAM-I3691CP-Group8-ENGITRIAD)
 │   │   parallax-scroll-view.tsx
 │   │   themed-text.tsx
 │   │   themed-view.tsx
-│   │
+│   │   
 │   └───ui
 │           collapsible.tsx
 │           icon-symbol.ios.tsx
 │           icon-symbol.tsx
-│
+│           
 ├───constants
-│       theme.ts               ← Colour palette, typography constants
-│
+│       theme.ts
+│       
 ├───hooks
 │       use-color-scheme.ts
 │       use-color-scheme.web.ts
 │       use-theme-color.ts
-│
+│       
 └───scripts
         reset-project.js
 ```
