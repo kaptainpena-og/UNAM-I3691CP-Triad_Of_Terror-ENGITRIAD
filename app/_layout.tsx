@@ -24,7 +24,8 @@ export default function RootLayout() {
         
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="auto" />
+      {/* Forced style="light" to ensure visibility over the brand's primary deep navy backdrop */}
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }

@@ -1,145 +1,168 @@
-import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+// app/(tabs)/index.tsx
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-const POSTS = [
-  {
-    id: '1',
-    user: 'nature_lens',
-    location: 'Yosemite Valley',
-    image: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=950&q=80',
-    likes: 1245,
-    caption: 'A perfect sunset after a long hike.',
-  },
-  {
-    id: '2',
-    user: 'urban.tales',
-    location: 'Downtown',
-    image: 'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=950&q=80',
-    likes: 843,
-    caption: 'City lights and neon nights.',
-  },
-  {
-    id: '3',
-    user: 'coffeetime',
-    location: 'Local cafe',
-    image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=950&q=80',
-    likes: 679,
-    caption: 'Best way to start the day.',
-  },
-];
+export default function DashboardScreen() {
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
-function PostCard({post}: {post: typeof POSTS[number]}) {
+  const handleDepartments = () => {
+    router.push('/(tabs)/departments');
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              // TODO: call Firebase deleteUser(auth.currentUser) here
+              router.replace('/(auth)/login');
+            } catch (e: any) {
+              Alert.alert('Error', e.message ?? 'Failed to delete account.');
+            } finally {
+              setDeletingAccount(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReturnToLogin = () => {
+    // TODO: call Firebase signOut(auth) here before navigating
+    router.replace('/(auth)/login');
+  };
+
   return (
-    <View style={styles.postCard}>
-      <View style={styles.postHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{post.user[0].toUpperCase()}</Text>
-        </View>
-        <View style={styles.postDetails}>
-          <ThemedText type="subtitle" style={styles.username}>{post.user}</ThemedText>
-          <Text style={styles.location}>{post.location}</Text>
-        </View>
-      </View>
-      <Image source={{ uri: post.image }} style={styles.postImage} />
-      <View style={styles.postFooter}>
-        <Text style={styles.likes}>{post.likes.toLocaleString()} likes</Text>
-        <Text style={styles.caption}><Text style={styles.username}>{post.user}</Text> {post.caption}</Text>
-      </View>
-    </View>
-  );
-}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>insta-clone</Text>
-        <Text style={styles.subtitle}>mockup feed</Text>
+        {/* ── Centre content ── */}
+        <View style={styles.centreContent}>
+
+          {/* Departments button — amber filled pill */}
+          <TouchableOpacity
+            style={styles.departmentsButton}
+            onPress={handleDepartments}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.departmentsButtonText}>DEPARTMENTS</Text>
+          </TouchableOpacity>
+
+          {/* Spacer between buttons */}
+          <View style={styles.buttonSpacer} />
+
+          {/* Delete My Account button — white outlined pill */}
+          <TouchableOpacity
+            style={[styles.deleteButton, deletingAccount && styles.buttonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+            activeOpacity={0.85}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator color={Colors.tagline} />
+            ) : (
+              <Text style={styles.deleteButtonText}>DELETE MY ACC</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Return to login link */}
+          <TouchableOpacity
+            style={styles.returnWrapper}
+            onPress={handleReturnToLogin}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.returnText}>Return to login</Text>
+          </TouchableOpacity>
+
+        </View>
+
       </View>
-      <ScrollView contentContainerStyle={styles.feed}>
-        {POSTS.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </ScrollView>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '900',
-    textTransform: 'lowercase',
-  },
-  subtitle: {
-    color: '#555',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  feed: {
-    padding: 12,
-    gap: 16,
-  },
-  postCard: {
-    backgroundColor: '#fff',
-    borderColor: '#eee',
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
   },
-  avatarText: {
-    fontWeight: '700',
-  },
-  postDetails: {
-    marginLeft: 10,
-  },
-  username: {
-    fontWeight: '700',
-  },
-  location: {
-    fontSize: 12,
-    color: '#666',
-  },
-  postImage: {
+
+  // ── Centre block ──
+  centreContent: {
     width: '100%',
-    height: 260,
-    backgroundColor: '#f3f3f3',
+    alignItems: 'center',
   },
-  postFooter: {
-    padding: 10,
+
+  // ── Departments button ──
+  departmentsButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.pill,
+    paddingVertical: 18,
+    width: '100%',
+    alignItems: 'center',
+    ...Shadow.button,
   },
-  likes: {
-    fontWeight: '700',
-    marginBottom: 6,
+  departmentsButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: 15,
+    letterSpacing: 2,
+    color: Colors.tagline,        // teal text on amber — matches Figma
   },
-  caption: {
-    color: '#333',
+
+  buttonSpacer: {
+    height: Spacing.xl,
+  },
+
+  // ── Delete account button ──
+  deleteButton: {
+    backgroundColor: Colors.text,  // white pill
+    borderRadius: BorderRadius.pill,
+    paddingVertical: 18,
+    width: '100%',
+    alignItems: 'center',
+    ...Shadow.card,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: 15,
+    letterSpacing: 2,
+    color: Colors.tagline,          // teal text on white — matches Figma
+  },
+
+  // ── Return to login ──
+  returnWrapper: {
+    marginTop: Spacing.lg,
+  },
+  returnText: {
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
+    color: Colors.primary,          // amber text link
   },
 });
