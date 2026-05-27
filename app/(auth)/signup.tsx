@@ -1,173 +1,325 @@
 // app/(auth)/signup.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+
+import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
 import { router } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+type AuthTab = 'login' | 'signup';
 
 export default function SignupScreen() {
+  const [activeTab, setActiveTab] = useState<AuthTab>('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleTabChange = (tab: 'login' | 'signup') => {
+  const handleTabSwitch = (tab: AuthTab) => {
     setActiveTab(tab);
+    setError('');
     if (tab === 'login') {
       router.push('/(auth)/login');
     }
   };
 
-  const handleSignup = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleSignup = async () => {
+    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError('Please fill in all fields.');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setError('Passwords do not match.');
       return;
     }
-    // TODO: Firebase Auth will be connected later
-    console.log('Signup attempt:', { name, email });
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      // TODO: call Firebase createUserWithEmailAndPassword here
+      // await createUserWithEmailAndPassword(auth, email, password);
+      // await updateProfile(userCredential.user, { displayName: name });
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      setError(e.message ?? 'Sign up failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>ENGITRIAD</Text>
-        <Text style={styles.subtitle}>THE POWER OF THREE. APPLIED</Text>
-      </View>
-
-      {/* Segmented Control */}
-      <View style={styles.segmentContainer}>
-        <TouchableOpacity
-          style={[styles.segmentButton, activeTab === 'login' && styles.segmentActive]}
-          onPress={() => handleTabChange('login')}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.segmentText, activeTab === 'login' && styles.segmentTextActive]}>log in</Text>
-        </TouchableOpacity>
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <Text style={styles.appTitle}>ENGITRIAD</Text>
+            <Text style={styles.tagline}>THE POWER OF THREE. APPLIED</Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.segmentButton, activeTab === 'signup' && styles.segmentActive]}
-          onPress={() => handleTabChange('signup')}
-        >
-          <Text style={[styles.segmentText, activeTab === 'signup' && styles.segmentTextActive]}>sign up</Text>
-        </TouchableOpacity>
-      </View>
+          {/* ── Spacer ── */}
+          <View style={styles.spacer} />
 
-      {/* Form */}
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          value={name}
-          onChangeText={setName}
-        />
+          {/* ── Tab Toggle ── */}
+          <View style={styles.togglePill}>
+            <TouchableOpacity
+              style={[styles.toggleTab, activeTab === 'login' && styles.toggleTabActive]}
+              onPress={() => handleTabSwitch('login')}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.toggleTabText,
+                  activeTab === 'login'
+                    ? styles.toggleTabTextActive
+                    : styles.toggleTabTextInactive,
+                ]}
+              >
+                log in
+              </Text>
+            </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="User name or Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+            <TouchableOpacity
+              style={[styles.toggleTab, activeTab === 'signup' && styles.toggleTabActive]}
+              onPress={() => handleTabSwitch('signup')}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.toggleTabText,
+                  activeTab === 'signup'
+                    ? styles.toggleTabTextActive
+                    : styles.toggleTabTextInactive,
+                ]}
+              >
+                sign up
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          {/* ── Form ── */}
+          <View style={styles.form}>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder=""
+                placeholderTextColor={Colors.textPlaceholder}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+            </View>
 
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-          <Text style={styles.signupButtonText}>Sign up</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>User name or Email</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder=""
+                placeholderTextColor={Colors.textPlaceholder}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder=""
+                placeholderTextColor={Colors.textPlaceholder}
+                secureTextEntry
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder=""
+                placeholderTextColor={Colors.textPlaceholder}
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleSignup}
+              />
+            </View>
+
+            {/* Error message */}
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+          </View>
+
+          {/* ── Sign Up Button ── */}
+          <TouchableOpacity
+            style={[styles.signupButton, loading && styles.signupButtonDisabled]}
+            onPress={handleSignup}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.textOnPrimary} />
+            ) : (
+              <Text style={styles.signupButtonText}>Sign up</Text>
+            )}
+          </TouchableOpacity>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 40,
+  flex: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xxl,
     alignItems: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: Colors.white,
+
+  // ── Header ──
+  header: {
+    alignItems: 'center',
+    marginTop: Spacing.xxl,
+  },
+  appTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: 36,
+    letterSpacing: 4,
+    color: Colors.text,
+  },
+  tagline: {
+    fontFamily: FontFamily.medium,
+    fontSize: 13,
     letterSpacing: 2,
+    color: Colors.tagline,
+    marginTop: Spacing.xs,
   },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.white,
-    marginTop: 8,
-    opacity: 0.95,
+
+  spacer: {
+    height: 60,
   },
-  segmentContainer: {
+
+  // ── Toggle ──
+  togglePill: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
-    marginHorizontal: 20,
-    marginTop: -20,
-    borderRadius: 25,
+    backgroundColor: Colors.toggleBackground,
+    borderRadius: BorderRadius.pill,
     padding: 4,
+    width: '100%',
+    marginBottom: Spacing.xl,
   },
-  segmentButton: {
+  toggleTab: {
     flex: 1,
     paddingVertical: 12,
+    borderRadius: BorderRadius.pill,
     alignItems: 'center',
-    borderRadius: 22,
   },
-  segmentActive: {
-    backgroundColor: Colors.primary,
+  toggleTabActive: {
+    backgroundColor: Colors.toggleActive,
+    ...Shadow.button,
   },
-  segmentText: {
-    fontSize: 16,
-    color: '#666',
-    textTransform: 'lowercase',
+  toggleTabText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: 15,
   },
-  segmentTextActive: {
-    color: Colors.white,
-    fontWeight: '600',
+  toggleTabTextActive: {
+    color: Colors.toggleActiveText,
   },
+  toggleTabTextInactive: {
+    color: Colors.toggleInactiveText,
+  },
+
+  // ── Form ──
   form: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
+    width: '100%',
+    marginBottom: Spacing.lg,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    fontFamily: FontFamily.regular,
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginBottom: 6,
+    marginLeft: Spacing.sm,
   },
   input: {
     backgroundColor: Colors.inputBackground,
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    marginBottom: 16,
+    borderRadius: BorderRadius.pill,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
+    fontSize: 15,
+    fontFamily: FontFamily.regular,
+    color: Colors.textInput,
   },
+
+  // ── Error ──
+  errorText: {
+    fontFamily: FontFamily.regular,
+    fontSize: 13,
+    color: Colors.error,
+    marginTop: Spacing.sm,
+    marginLeft: Spacing.sm,
+  },
+
+  // ── Sign Up Button ──
   signupButton: {
     backgroundColor: Colors.primary,
-    borderRadius: 25,
-    paddingVertical: 16,
+    borderRadius: BorderRadius.pill,
+    paddingVertical: 15,
+    paddingHorizontal: Spacing.xxl,
     alignItems: 'center',
-    marginTop: 10,
+    minWidth: 150,
+    ...Shadow.button,
+  },
+  signupButtonDisabled: {
+    opacity: 0.7,
   },
   signupButtonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: '600',
+    fontFamily: FontFamily.semiBold,
+    fontSize: 16,
+    color: Colors.textOnPrimary,
+    letterSpacing: 0.5,
   },
 });

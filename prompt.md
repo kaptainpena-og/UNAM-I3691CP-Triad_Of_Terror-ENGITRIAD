@@ -34,10 +34,6 @@ C:.
 │   SRS.pdf
 │   tsconfig.json
 │   
-├───.anima
-│   └───cache
-│           f37c950882acc9d846379b779dc73d2903b6ccab7f02cfc5aa93450395bde981
-│           
 ├───.expo
 │   │   devices.json
 │   │   README.md
@@ -54,15 +50,29 @@ C:.
 │   │   _layout.tsx
 │   │   
 │   ├───(auth)
+│   │       forgot-password.tsx
 │   │       login.tsx
 │   │       signup.tsx
 │   │       _layout.tsx
 │   │       
 │   └───(tabs)
-│           explore.tsx
-│           index.tsx
-│           _layout.tsx
-│           
+│       │   departments.tsx
+│       │   explore.tsx
+│       │   index.tsx
+│       │   _layout.tsx
+│       │   
+│       ├───blast
+│       │       index.tsx
+│       │       results.tsx
+│       │       
+│       ├───concrete
+│       │       index.tsx
+│       │       results.tsx
+│       │       
+│       └───corrosion
+│               index.tsx
+│               results.tsx
+│               
 ├───assets
 │   └───images
 │           android-icon-background.png
