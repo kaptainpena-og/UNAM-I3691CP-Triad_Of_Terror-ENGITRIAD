@@ -1,19 +1,22 @@
 // app/(auth)/signup.tsx
 
 import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
+import { auth, db } from '@/services/firebase';
 import { router } from 'expo-router';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type AuthTab = 'login' | 'signup';
@@ -51,10 +54,20 @@ export default function SignupScreen() {
     setError('');
     setLoading(true);
     try {
-      // TODO: call Firebase createUserWithEmailAndPassword here
-      // await createUserWithEmailAndPassword(auth, email, password);
-      // await updateProfile(userCredential.user, { displayName: name });
-      router.replace('/(tabs)');
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const user = userCredential.user;
+
+      // Create the user profile in Firestore according to the SRS schema
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        displayName: name.trim(),
+        email: email.trim(),
+        role: 'student', // Defaulting role as per schema, can be updated in-app later
+        domain: 'general', // Defaulting domain
+        createdAt: serverTimestamp()
+      });
+
+      router.replace('/(tabs)/departments');
     } catch (e: any) {
       setError(e.message ?? 'Sign up failed. Please try again.');
     } finally {
@@ -136,7 +149,7 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>User name or Email</Text>
+              <Text style={styles.inputLabel}>Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
