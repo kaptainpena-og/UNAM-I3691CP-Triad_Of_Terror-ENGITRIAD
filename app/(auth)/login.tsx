@@ -1,7 +1,9 @@
 // app/(auth)/login.tsx
 
 import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
+import { auth } from '@/services/firebase';
 import { router } from 'expo-router';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -32,9 +34,10 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      // TODO: call Firebase signInWithEmailAndPassword here
-      // await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/(tabs)');
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      // The AuthContext listener in _layout.tsx will also catch this, 
+      // but explicitly routing provides immediate feedback.
+      router.replace('/(tabs)/departments');
     } catch (e: any) {
       setError(e.message ?? 'Login failed. Please try again.');
     } finally {
@@ -107,9 +110,9 @@ export default function LoginScreen() {
           {/* ── Form ── */}
           <View style={styles.form}>
 
-            {/* Email / Username */}
+            {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>User name or Email</Text>
+              <Text style={styles.inputLabel}>Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
