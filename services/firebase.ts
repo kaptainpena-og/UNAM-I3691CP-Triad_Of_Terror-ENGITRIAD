@@ -1,8 +1,10 @@
 // services/firebase.ts
-import { getApp, getApps, initializeApp } from 'firebase/app';
+
+import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// Your web app's Firebase configuration using Expo environment variables
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,11 +14,9 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only if it hasn't been initialized already to prevent hot-reloading errors
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig);
 
-// Export Firebase services for use across the application
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-export { app, auth, db };
+// Initialize and export Authentication and Firestore services
+export const auth = getAuth(app);
+export const db = getFirestore(app);
