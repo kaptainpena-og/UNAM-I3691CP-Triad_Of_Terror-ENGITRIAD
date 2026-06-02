@@ -1,15 +1,12 @@
 // app/(auth)/signup.tsx
 
-import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
-import { auth, db } from '@/services/firebase';
-import { router } from 'expo-router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Colors, FontFamily } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -19,57 +16,34 @@ import {
   View,
 } from 'react-native';
 
-type AuthTab = 'login' | 'signup';
+export default function SignUpScreen() {
+  const router = useRouter();
+  const { register } = useAuth();
 
-export default function SignupScreen() {
-  const [activeTab, setActiveTab] = useState<AuthTab>('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('');
+  const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleTabSwitch = (tab: AuthTab) => {
-    setActiveTab(tab);
-    setError('');
-    if (tab === 'login') {
-      router.push('/(auth)/login');
+  const handleSignUp = async () => {
+    if (!name.trim() || !email.trim() || !password.trim() || !role.trim() || !domain.trim()) {
+      Alert.alert('Validation Error', 'All registration fields are mandatory.');
+      return;
     }
-  };
 
-  const handleSignup = async () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      setError('Please fill in all fields.');
+    const cleanedRole = role.trim().toLowerCase();
+    if (cleanedRole !== 'engineer' && cleanedRole !== 'supervisor' && cleanedRole !== 'student') {
+      Alert.alert('Validation Error', "Role must be exactly 'engineer', 'supervisor', or 'student'.");
       return;
     }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    setError('');
+
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const user = userCredential.user;
-
-      // Create the user profile in Firestore according to the SRS schema
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        displayName: name.trim(),
-        email: email.trim(),
-        role: 'student', // Defaulting role as per schema, can be updated in-app later
-        domain: 'general', // Defaulting domain
-        createdAt: serverTimestamp()
-      });
-
-      router.replace('/(tabs)/departments');
-    } catch (e: any) {
-      setError(e.message ?? 'Sign up failed. Please try again.');
+      await register(email.trim(), password, name.trim(), cleanedRole, domain.trim());
+    } catch (error: any) {
+      Alert.alert('Registration Failed', error.message || 'An error occurred during account signup.');
     } finally {
       setLoading(false);
     }
@@ -77,262 +51,167 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>REGISTRATION</Text>
+        <Text style={styles.subtitle}>Create your EngiTriad secure profile</Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>FULL NAME</Text>
+          <TextInput
+            style={styles.inputField}
+            placeholder="e.g., Jane Doe"
+            placeholderTextColor={Colors.textMuted}
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+          <TextInput
+            style={styles.inputField}
+            placeholder="jane.doe@firm.com"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>PASSWORD</Text>
+          <TextInput
+            style={styles.inputField}
+            placeholder="Minimum 6 characters"
+            placeholderTextColor={Colors.textMuted}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>ROLE (engineer | supervisor | student)</Text>
+          <TextInput
+            style={styles.inputField}
+            placeholder="Must match system parameters exactly"
+            placeholderTextColor={Colors.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={role}
+            onChangeText={setRole}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>ENGINEERING DOMAIN</Text>
+          <TextInput
+            style={styles.inputField}
+            placeholder="e.g., Civil, Mining, Metallurgy"
+            placeholderTextColor={Colors.textMuted}
+            value={domain}
+            onChangeText={setDomain}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleSignUp}
+          disabled={loading}
         >
-          {/* ── Header ── */}
-          <View style={styles.header}>
-            <Text style={styles.appTitle}>ENGITRIAD</Text>
-            <Text style={styles.tagline}>THE POWER OF THREE. APPLIED</Text>
-          </View>
+          {loading ? (
+            <ActivityIndicator color={Colors.textOnPrimary} />
+          ) : (
+            <Text style={styles.primaryButtonText}>REGISTER</Text>
+          )}
+        </TouchableOpacity>
 
-          {/* ── Spacer ── */}
-          <View style={styles.spacer} />
-
-          {/* ── Tab Toggle ── */}
-          <View style={styles.togglePill}>
-            <TouchableOpacity
-              style={[styles.toggleTab, activeTab === 'login' && styles.toggleTabActive]}
-              onPress={() => handleTabSwitch('login')}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.toggleTabText,
-                  activeTab === 'login'
-                    ? styles.toggleTabTextActive
-                    : styles.toggleTabTextInactive,
-                ]}
-              >
-                log in
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleTab, activeTab === 'signup' && styles.toggleTabActive]}
-              onPress={() => handleTabSwitch('signup')}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.toggleTabText,
-                  activeTab === 'signup'
-                    ? styles.toggleTabTextActive
-                    : styles.toggleTabTextInactive,
-                ]}
-              >
-                sign up
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── Form ── */}
-          <View style={styles.form}>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder=""
-                placeholderTextColor={Colors.textPlaceholder}
-                autoCapitalize="words"
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder=""
-                placeholderTextColor={Colors.textPlaceholder}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder=""
-                placeholderTextColor={Colors.textPlaceholder}
-                secureTextEntry
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder=""
-                placeholderTextColor={Colors.textPlaceholder}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleSignup}
-              />
-            </View>
-
-            {/* Error message */}
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
-          </View>
-
-          {/* ── Sign Up Button ── */}
-          <TouchableOpacity
-            style={[styles.signupButton, loading && styles.signupButtonDisabled]}
-            onPress={handleSignup}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.signupButtonText}>Sign up</Text>
-            )}
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>Already registered? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+            <Text style={styles.footerLink}>Sign In</Text>
           </TouchableOpacity>
-
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.xxl,
-    alignItems: 'center',
+  scrollContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    justifyContent: 'center',
   },
-
-  // ── Header ──
-  header: {
-    alignItems: 'center',
-    marginTop: Spacing.xxl,
-  },
-  appTitle: {
+  title: {
     fontFamily: FontFamily.bold,
-    fontSize: 36,
-    letterSpacing: 4,
-    color: Colors.text,
+    fontSize: 28,
+    color: Colors.secondary,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
-  tagline: {
-    fontFamily: FontFamily.medium,
-    fontSize: 13,
-    letterSpacing: 2,
-    color: Colors.tagline,
-    marginTop: Spacing.xs,
-  },
-
-  spacer: {
-    height: 60,
-  },
-
-  // ── Toggle ──
-  togglePill: {
-    flexDirection: 'row',
-    backgroundColor: Colors.toggleBackground,
-    borderRadius: BorderRadius.pill,
-    padding: 4,
-    width: '100%',
-    marginBottom: Spacing.xl,
-  },
-  toggleTab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.pill,
-    alignItems: 'center',
-  },
-  toggleTabActive: {
-    backgroundColor: Colors.toggleActive,
-    ...Shadow.button,
-  },
-  toggleTabText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: 15,
-  },
-  toggleTabTextActive: {
-    color: Colors.toggleActiveText,
-  },
-  toggleTabTextInactive: {
-    color: Colors.toggleInactiveText,
-  },
-
-  // ── Form ──
-  form: {
-    width: '100%',
-    marginBottom: Spacing.lg,
+  subtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: 14,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 32,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
+    marginBottom: 18,
   },
   inputLabel: {
-    fontFamily: FontFamily.regular,
-    fontSize: 13,
-    color: Colors.textMuted,
+    fontFamily: FontFamily.medium,
+    fontSize: 11,
+    color: Colors.text,
     marginBottom: 6,
-    marginLeft: Spacing.sm,
-  },
-  input: {
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.pill,
-    paddingVertical: 14,
-    paddingHorizontal: Spacing.lg,
-    fontSize: 15,
-    fontFamily: FontFamily.regular,
-    color: Colors.textInput,
-  },
-
-  // ── Error ──
-  errorText: {
-    fontFamily: FontFamily.regular,
-    fontSize: 13,
-    color: Colors.error,
-    marginTop: Spacing.sm,
-    marginLeft: Spacing.sm,
-  },
-
-  // ── Sign Up Button ──
-  signupButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.pill,
-    paddingVertical: 15,
-    paddingHorizontal: Spacing.xxl,
-    alignItems: 'center',
-    minWidth: 150,
-    ...Shadow.button,
-  },
-  signupButtonDisabled: {
-    opacity: 0.7,
-  },
-  signupButtonText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: 16,
-    color: Colors.textOnPrimary,
     letterSpacing: 0.5,
+  },
+  inputField: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
+    color: Colors.text,
+    backgroundColor: '#FAFAFA',
+  },
+  primaryButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  primaryButtonText: {
+    fontFamily: FontFamily.bold,
+    color: Colors.textOnPrimary,
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  footerText: {
+    fontFamily: FontFamily.regular,
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  footerLink: {
+    fontFamily: FontFamily.bold,
+    color: Colors.primary,
+    fontSize: 14,
   },
 });

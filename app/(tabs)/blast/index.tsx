@@ -1,221 +1,387 @@
 // app/(tabs)/blast/index.tsx
 
+import { Colors, FontFamily } from '@/constants/theme';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  SafeAreaView,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
 
-export default function BlastIndex() {
+export default function NewBlastScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'Inputs' | 'Site Constants' | 'Blasting Guidelines'>('Inputs');
 
-  const [chargePerHole, setChargePerHole] = useState('25.0');
-  const [holesPerDelay, setHolesPerDelay] = useState('8');
-  const [distanceToStructure, setDistanceToStructure] = useState('150');
+  // Form States (Pre-populated with your exact Figma design values for testing)
+  const [blastLocation, setBlastLocation] = useState('Block C – Zone 4 (GPS)');
+  const [date, setDate] = useState('14/05/2025');
+  const [time, setTime] = useState('09:30');
+  const [explosiveType, setExplosiveType] = useState('ANFO');
+  const [holeDepth, setHoleDepth] = useState('8.5');
+  const [chargePerHole, setChargePerHole] = useState('18.0');
+  const [holesDelay, setHolesDelay] = useState('4');
+  const [distance, setDistance] = useState('180');
+  const [kConstant, setKConstant] = useState('682');
+  const [alphaConstant, setAlphaConstant] = useState('1.6');
 
-  const [siteConstantK, setSiteConstantK] = useState('682');
-  const [attenuationAlpha, setAttenuationAlpha] = useState('1.6');
-  const [cpdLimit, setCpdLimit] = useState('300');
+  // Computed State
+  const [cpd, setCpd] = useState(72);
 
-  const [useDefaultConstants, setUseDefaultConstants] = useState(true);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Automatically calculate CPD when dependent parameters change
+  useEffect(() => {
+    const q = parseFloat(chargePerHole) || 0;
+    const n = parseFloat(holesDelay) || 0;
+    setCpd(Math.round(q * n * 10) / 10);
+  }, [chargePerHole, holesDelay]);
 
-  const parsedQ = parseFloat(chargePerHole) || 0;
-  const parsedN = parseFloat(holesPerDelay) || 0;
-  const currentCPD = parsedQ * parsedN;
-
-  const allowedCpdMax = parseFloat(cpdLimit) || 300;
-  const isCpdOverLimit = currentCPD > allowedCpdMax;
-
-  const handleRunPrediction = () => {
-    const newErrors: Record<string, string> = {};
-    const parsedD = parseFloat(distanceToStructure);
-    const parsedK = parseFloat(siteConstantK);
-    const parsedAlpha = parseFloat(attenuationAlpha);
-
-    if (isNaN(parsedQ) || parsedQ <= 0) newErrors.chargePerHole = 'Charge per hole must be greater than zero.';
-    if (isNaN(parsedN) || parsedN <= 0) newErrors.holesPerDelay = 'Hole count must be at least 1.';
-    if (isNaN(parsedD) || parsedD <= 0) newErrors.distanceToStructure = 'Valid separation distance to building is required.';
-
-    if (!useDefaultConstants) {
-      if (isNaN(parsedK) || parsedK <= 0) newErrors.siteConstantK = 'Valid geological site constant K is required.';
-      if (isNaN(parsedAlpha) || parsedAlpha <= 0) newErrors.attenuationAlpha = 'Valid site attenuation exponent is required.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    setErrors({});
-
+  const handleCalculatePPV = () => {
+    // Navigate to results page passing all structural calculation inputs
     router.push({
-      pathname: '/blast/results',
+      pathname: '/(tabs)/blast/results',
       params: {
-        chargePerHole: String(parsedQ),
-        holesPerDelay: String(parsedN),
-        distanceToStructure: String(parsedD),
-        siteConstantK: useDefaultConstants ? '682' : String(parsedK),
-        attenuationAlpha: useDefaultConstants ? '1.6' : String(parsedAlpha),
-        calculatedCPD: String(currentCPD),
-        isCpdOverLimit: String(isCpdOverLimit),
-      },
+        blastLocation,
+        date,
+        time,
+        explosiveType,
+        holeDepth,
+        chargePerHole,
+        holesDelay,
+        distance,
+        kConstant,
+        alphaConstant,
+        cpd: cpd.toString()
+      }
     });
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.appTitle}>BLASTGUARD MODULE</Text>
-        <Text style={styles.appSubtitle}>VIBRATION CONTROL & PPV PREDICTION SYSTEM</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Custom Figma Header Navbar */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity style={styles.menuButton}>
+          <Text style={styles.menuIconBar}>≡</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>NEW BLAST</Text>
+        <TouchableOpacity style={styles.saveCircleButton}>
+          <Text style={styles.saveIcon}>💾</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.tabContainer}>
-        {(['Inputs', 'Site Constants', 'Blasting Guidelines'] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
-
-        {activeTab === 'Inputs' && (
-          <View>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>• HOLE GEOMETRY & LOADING SPECIFICATION</Text>
-
-              <Text style={styles.inputLabel}>CHARGE PER HOLE - q (kg)</Text>
-              <TextInput style={styles.input} keyboardType="numeric" value={chargePerHole} onChangeText={setChargePerHole} placeholder="e.g. 45.5" placeholderTextColor="#667788" />
-              {errors.chargePerHole && <Text style={styles.errorText}>{errors.chargePerHole}</Text>}
-
-              <Text style={styles.inputLabel}>NUMBER OF HOLES PER DELAY INTERVAL - N</Text>
-              <TextInput style={styles.input} keyboardType="numeric" value={holesPerDelay} onChangeText={setHolesPerDelay} placeholder="e.g. 4" placeholderTextColor="#667788" />
-              {errors.holesPerDelay && <Text style={styles.errorText}>{errors.holesPerDelay}</Text>}
-
-              <Text style={styles.inputLabel}>DISTANCE TO NEAREST ASSET STRUCTURE - D (m)</Text>
-              <TextInput style={styles.input} keyboardType="numeric" value={distanceToStructure} onChangeText={setDistanceToStructure} placeholder="e.g. 250" placeholderTextColor="#667788" />
-              {errors.distanceToStructure && <Text style={styles.errorText}>{errors.distanceToStructure}</Text>}
-            </View>
-
-            <View style={[styles.cpdResultCard, isCpdOverLimit && styles.cpdResultCardAlert]}>
-              <Text style={styles.cpdCardLabel}>LIVE FIELD DEDUCTION: CHARGE PER DELAY (CPD)</Text>
-              <Text style={styles.cpdValueText}>{currentCPD.toFixed(1)} kg</Text>
-              <Text style={styles.cpdFormulaText}>Formula Reference: CPD = q × N</Text>
-              {isCpdOverLimit && (
-                <Text style={styles.cpdLimitWarningText}>⚠️ WARNING: Structural payload limits breached! Exceeds the {allowedCpdMax} kg safety cap threshold.</Text>
-              )}
-            </View>
-
-            <TouchableOpacity style={styles.calculateButton} onPress={handleRunPrediction}>
-              <Text style={styles.calculateButtonText}>▶ RUN COMPLIANCE PREDICTION</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {activeTab === 'Site Constants' && (
-          <View>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Enforce Standard Default Site Metrics (K=682, α=1.6)</Text>
-              <Switch value={useDefaultConstants} onValueChange={setUseDefaultConstants} thumbColor="#00bfff" trackColor={{ false: '#223344', true: '#004488' }} />
-            </View>
-
-            {!useDefaultConstants && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>• EMPIRICAL SITE REGRESSION PROFILE</Text>
-
-                <Text style={styles.inputLabel}>SITE TRANSMISSION CONSTANT - K (Geology dependent)</Text>
-                <TextInput style={styles.input} keyboardType="numeric" value={siteConstantK} onChangeText={setSiteConstantK} placeholder="Typical range: 160 - 1800" placeholderTextColor="#667788" />
-                {errors.siteConstantK && <Text style={styles.errorText}>{errors.siteConstantK}</Text>}
-
-                <Text style={styles.inputLabel}>ATTENUATION EXPONENT / SLOPE COEFFICIENT - α</Text>
-                <TextInput style={styles.input} keyboardType="numeric" value={attenuationAlpha} onChangeText={setAttenuationAlpha} placeholder="Typical range: 1.2 - 2.0" placeholderTextColor="#667788" />
-                {errors.attenuationAlpha && <Text style={styles.errorText}>{errors.attenuationAlpha}</Text>}
-              </View>
-            )}
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>• MAX PERMISSIBLE SITE SEVERITY CAP</Text>
-              <Text style={styles.inputLabel}>CRITICAL CPD BOUNDARY CONSTRAINT VALUE (kg)</Text>
-              <TextInput style={styles.input} keyboardType="numeric" value={cpdLimit} onChangeText={setCpdLimit} placeholder="300" placeholderTextColor="#667788" />
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        
+        {/* SECTION 1: LOCATION & TIME */}
+        <View style={styles.cardSection}>
+          <Text style={styles.sectionHeader}>📍 LOCATION & TIME</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.fieldLabel}>BLAST LOCATION</Text>
+            <View style={styles.inputWithIconContainer}>
+              <Text style={styles.inlineIcon}>⛏️</Text>
+              <TextInput
+                style={[styles.input, { paddingLeft: 36, color: Colors.primary }]}
+                value={blastLocation}
+                onChangeText={setBlastLocation}
+              />
             </View>
           </View>
-        )}
 
-        {activeTab === 'Blasting Guidelines' && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>• APPLIED MATHEMATICAL STANDARD SCHEMATICS</Text>
-
-            <View style={styles.formulaItem}>
-              <Text style={styles.formulaName}>1. Net Effective Energy Load Profile</Text>
-              <Text style={styles.formulaExpression}>CPD = q × N</Text>
-              <Text style={styles.formulaDescription}>
-                Calculates the instantaneous explosive energy release sequence detonated inside an identical milli-second delay buffer window.
-              </Text>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.fieldLabel}>DATE</Text>
+              <TextInput
+                style={styles.input}
+                value={date}
+                onChangeText={setDate}
+              />
             </View>
-
-            <View style={styles.formulaItem}>
-              <Text style={styles.formulaName}>2. Ground Geometric Attenuation Ratio (Scaled Distance)</Text>
-              <Text style={styles.formulaExpression}>{"SD = D / √CPD"}</Text>
-              <Text style={styles.formulaDescription}>
-                Normalizes relative geospatial distance against energy payloads. Governs peak shockwave dissipation models used in civil design regulations.
-              </Text>
-            </View>
-
-            <View style={styles.formulaItem}>
-              <Text style={styles.formulaName}>3. Predicted Peak Particle Velocity (USBM RI 8507 / ISEE)</Text>
-              <Text style={styles.formulaExpression}>{"PPV = K × (SD)^(-α)"}</Text>
-              <Text style={styles.formulaDescription}>
-                Determines actual vector ground vibration wave speed passing a remote asset structure. Used directly to evaluate building damage probabilities.
-              </Text>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>TIME (24H)</Text>
+              <TextInput
+                style={styles.input}
+                value={time}
+                onChangeText={setTime}
+              />
             </View>
           </View>
-        )}
+        </View>
+
+        {/* SECTION 2: EXPLOSIVE PARAMETERS */}
+        <View style={styles.cardSection}>
+          <Text style={styles.sectionHeader}>💣 EXPLOSIVE PARAMETERS</Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.fieldLabel}>EXPLOSIVE TYPE</Text>
+            <TextInput
+              style={styles.input}
+              value={explosiveType}
+              onChangeText={setExplosiveType}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.fieldLabel}>HOLE DEPTH (m)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={holeDepth}
+                onChangeText={setHoleDepth}
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>CHARGE / HOLE (kg)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={chargePerHole}
+                onChangeText={setChargePerHole}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.fieldLabel}>HOLES / DELAY [N]</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={holesDelay}
+                onChangeText={setHolesDelay}
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>DISTANCE [m]</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={distance}
+                onChangeText={setDistance}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 3: CPD PREVIEW */}
+        <View style={styles.cardSection}>
+          <Text style={styles.sectionHeader}>🔢 CPD PREVIEW</Text>
+          <View style={styles.cpdRow}>
+            <View>
+              <Text style={styles.formulaText}>CPD = q × N</Text>
+              <Text style={styles.formulaSubText}>Auto-calculated</Text>
+            </View>
+            <Text style={styles.cpdValue}>
+              {cpd} <Text style={styles.cpdUnit}>kg</Text>
+            </Text>
+          </View>
+        </View>
+
+        {/* SECTION 4: SITE CONSTANTS */}
+        <View style={styles.cardSection}>
+          <Text style={styles.sectionHeader}>⚙️ SITE CONSTANTS</Text>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.fieldLabel}>K (DEFAULT: 682)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={kConstant}
+                onChangeText={setKConstant}
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>α (DEFAULT: 1.6)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={alphaConstant}
+                onChangeText={setAlphaConstant}
+              />
+            </View>
+          </View>
+
+          <View style={styles.warningContainer}>
+            <Text style={styles.warningText}>
+              ⚠️ Using default site constants. Update with calibrated values from site regression analysis.
+            </Text>
+          </View>
+        </View>
+
+        {/* MAIN CALL TO ACTION ACTION BUTTON */}
+        <TouchableOpacity style={styles.calculateButton} onPress={handleCalculatePPV}>
+          <Text style={styles.calculateButtonText}>CALCULATE PPV →</Text>
+        </TouchableOpacity>
 
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001122' },
-  header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#112944' },
-  appTitle: { fontSize: 20, fontWeight: '900', color: '#00bfff', letterSpacing: 1.5 },
-  appSubtitle: { fontSize: 11, color: '#88aabb', marginTop: 2 },
-  tabContainer: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 10, backgroundColor: '#001633' },
-  tabButton: { flex: 1, paddingVertical: 8, marginHorizontal: 4, borderRadius: 20, backgroundColor: '#112544', alignItems: 'center' },
-  activeTabButton: { backgroundColor: '#e67e22' },
-  tabText: { fontSize: 10, color: '#aabbcc', fontWeight: '700', textAlign: 'center' },
-  activeTabText: { color: '#ffffff' },
-  scrollContainer: { flex: 1 },
-  scrollContent: { padding: 12, paddingBottom: 40 },
-  card: { backgroundColor: '#001a35', borderRadius: 8, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#112d4e' },
-  cardTitle: { fontSize: 12, fontWeight: 'bold', color: '#00bfff', marginBottom: 12 },
-  inputLabel: { fontSize: 10, fontWeight: '700', color: '#88aabb', marginTop: 10, marginBottom: 4 },
-  input: { backgroundColor: '#001122', borderColor: '#224466', borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, color: '#ffffff', fontSize: 14 },
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#001633', padding: 12, borderRadius: 6, marginBottom: 12 },
-  toggleLabel: { color: '#ffffff', fontSize: 12, fontWeight: '600', flex: 1, marginRight: 8 },
-  errorText: { color: '#ef4444', fontSize: 11, marginTop: 4, fontWeight: '600' },
-  cpdResultCard: { backgroundColor: '#002211', borderColor: '#116633', borderWidth: 1, borderRadius: 6, padding: 16, marginBottom: 16 },
-  cpdResultCardAlert: { backgroundColor: '#331111', borderColor: '#992222' },
-  cpdCardLabel: { fontSize: 10, fontWeight: 'bold', color: '#aabbcc' },
-  cpdValueText: { fontSize: 28, fontWeight: '900', color: '#f39c12', marginVertical: 4, fontFamily: 'monospace' },
-  cpdFormulaText: { fontSize: 11, color: '#88aabb', fontStyle: 'italic' },
-  cpdLimitWarningText: { color: '#f87171', fontSize: 11, fontWeight: 'bold', marginTop: 8 },
-  calculateButton: { backgroundColor: '#00bfff', borderRadius: 6, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
-  calculateButtonText: { color: '#ffffff', fontWeight: '900', fontSize: 15 },
-  formulaItem: { borderBottomWidth: 1, borderBottomColor: '#112d4e', paddingBottom: 12, marginBottom: 12 },
-  formulaName: { color: '#ffffff', fontSize: 13, fontWeight: 'bold' },
-  formulaExpression: { fontFamily: 'monospace', color: '#e67e22', backgroundColor: '#001122', padding: 8, borderRadius: 4, marginVertical: 6, fontSize: 12 },
-  formulaDescription: { color: '#aabbcc', fontSize: 11, lineHeight: 15 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#02153A', // Direct deep Navy background matching design system context
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#02153A',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  menuIconBar: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  headerTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: 20,
+    color: '#00BCD4', // Precise cyan tint used in design accents
+    letterSpacing: 1,
+  },
+  saveCircleButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveIcon: {
+    fontSize: 18,
+  },
+  cardSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)', // Tinted transparent card base layers
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  sectionHeader: {
+    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    color: Colors.primary, // #DDA131 Amber token
+    marginBottom: 14,
+    letterSpacing: 0.5,
+  },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontFamily: FontFamily.medium,
+    fontSize: 10,
+    color: '#757575',
+    marginBottom: 6,
+  },
+  inputWithIconContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inlineIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 2,
+    fontSize: 14,
+  },
+  input: {
+    backgroundColor: '#0c1a38',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  cpdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  formulaText: {
+    fontFamily: FontFamily.medium,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  formulaSubText: {
+    fontFamily: FontFamily.regular,
+    fontSize: 11,
+    color: '#757575',
+    marginTop: 2,
+  },
+  cpdValue: {
+    fontFamily: FontFamily.bold,
+    fontSize: 28,
+    color: Colors.primary,
+  },
+  cpdUnit: {
+    fontSize: 14,
+    fontFamily: FontFamily.regular,
+    color: '#757575',
+  },
+  warningContainer: {
+    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(233, 30, 99, 0.15)',
+  },
+  warningText: {
+    fontFamily: FontFamily.regular,
+    fontSize: 11,
+    color: '#A0A0A0',
+    lineHeight: 16,
+  },
+  calculateButton: {
+    backgroundColor: Colors.primary, // #DDA131 Amber design token
+    borderRadius: 25,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 28,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  calculateButtonText: {
+    fontFamily: FontFamily.bold,
+    color: '#02153A',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
 });
