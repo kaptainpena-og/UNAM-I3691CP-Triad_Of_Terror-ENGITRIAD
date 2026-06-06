@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FontFamily.bold,
     fontSize: 28,
-    color: Colors.secondary,
+    color: Colors.primary,
     textAlign: 'center',
     letterSpacing: 1,
   },
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontFamily: FontFamily.regular,
     fontSize: 15,
-    color: Colors.text,
+    color: "#000",
     backgroundColor: '#FAFAFA',
   },
   primaryButton: {
