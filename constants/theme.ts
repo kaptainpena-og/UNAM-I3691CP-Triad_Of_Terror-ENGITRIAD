@@ -3,7 +3,7 @@
 export const Colors = {
   // Core brand
   primary: '#DDA131',        // Amber — buttons, active toggle, accents
-  secondary: '#02153A',      // Navy — was background, now IS the background
+  secondary: '#02153A',      // Navy — the dominant background brand color
 
   // Backgrounds
   background: '#02153A',     // Deep navy (entire screen bg)
