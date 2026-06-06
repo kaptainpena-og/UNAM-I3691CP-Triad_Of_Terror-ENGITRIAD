@@ -1,13 +1,16 @@
 // app/(auth)/login.tsx
 
-import { Colors, FontFamily } from '@/constants/theme';
+import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -31,7 +34,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      // Auth Guard in _layout.tsx automatically roots signed-in sessions to departments hub
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'Please check your credentials.');
     } finally {
@@ -41,59 +43,70 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.brandTitle}>ENGITRIAD</Text>
-        <Text style={styles.brandSubtitle}>Multi-Domain Engineering Hub</Text>
-
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-            <TextInput
-              style={styles.inputField}
-              placeholder="engineer@domain.com"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={email}
-              onChangeText={setEmail}
-            />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.brandContainer}>
+            <Text style={styles.brandTitle}>ENGITRIAD</Text>
+            <Text style={styles.brandSubtitle}>Multi-Domain Engineering Hub</Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>PASSWORD</Text>
-            <TextInput
-              style={styles.inputField}
-              placeholder="••••••••"
-              placeholderTextColor={Colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={password}
-              onChangeText={setPassword}
-            />
+          <View style={styles.formCard}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+              <TextInput
+                style={styles.pillInput}
+                placeholder="engineer@domain.com"
+                placeholderTextColor={Colors.textPlaceholder}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>PASSWORD</Text>
+              <TextInput
+                style={styles.pillInput}
+                placeholder="••••••••"
+                placeholderTextColor={Colors.textPlaceholder}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.textOnPrimary} />
+              ) : (
+                <Text style={styles.primaryButtonText}>SIGN IN</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.primaryButtonText}>SIGN IN</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>New to the platform? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={styles.footerLink}>Create an Account</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>New to the platform? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+              <Text style={styles.footerLink}>Create an Account</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -103,71 +116,84 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  container: {
+  keyboardView: {
     flex: 1,
-    paddingHorizontal: 24,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
     justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
   },
   brandTitle: {
     fontFamily: FontFamily.bold,
-    fontSize: 36,
+    fontSize: 38,
     color: Colors.primary,
     textAlign: 'center',
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   brandSubtitle: {
-    fontFamily: FontFamily.regular,
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  formContainer: {
-    marginBottom: 24,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
     fontFamily: FontFamily.medium,
-    fontSize: 11,
-    color: Colors.text,
-    marginBottom: 8,
-    letterSpacing: 1,
+    fontSize: 14,
+    color: Colors.tagline,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+    letterSpacing: 0.5,
   },
-  inputField: {
+  formCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    ...Shadow.card,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+    paddingLeft: Spacing.sm,
+    letterSpacing: 1,
+  },
+  pillInput: {
+    backgroundColor: Colors.inputBackground,
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
     fontFamily: FontFamily.regular,
     fontSize: 15,
-    color: "#000",
-    backgroundColor: '#FAFAFA',
+    color: Colors.textInput,
   },
   primaryButton: {
     backgroundColor: Colors.primary,
-    borderRadius: 8,
+    borderRadius: BorderRadius.pill,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    marginTop: Spacing.md,
+    ...Shadow.button,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     fontFamily: FontFamily.bold,
     color: Colors.textOnPrimary,
     fontSize: 16,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   footerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: Spacing.md,
   },
   footerText: {
     fontFamily: FontFamily.regular,
