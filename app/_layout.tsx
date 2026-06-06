@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -13,22 +13,23 @@ export const unstable_settings = {
 };
 
 function RootLayoutNav() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navigationState = useRootNavigationState();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
+    if (isLoading || !navigationState?.key) return;
+
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Unauthenticated users are redirected to login
       router.replace('/(auth)/login');
     } else if (user && inAuthGroup) {
-      // Authenticated users are redirected away from auth screens
       router.replace('/(tabs)/departments');
     }
-  }, [user, segments]);
+  }, [user, segments, isLoading, navigationState?.key, router]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
