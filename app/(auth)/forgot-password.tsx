@@ -34,8 +34,25 @@ export default function ForgotPasswordScreen() {
     setError("");
     setLoading(true);
     try {
-      await (auth as any).sendPasswordResetEmail(email.trim());
-      setSent(true);
+      // Firebase REST API — works with any Firebase version
+      const apiKey = (auth.app.options as any).apiKey;
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requestType: "PASSWORD_RESET",
+            email: email.trim(),
+          }),
+        },
+      );
+      const data = await response.json();
+      if (data.error) {
+        setError(data.error.message ?? "Failed to send reset link.");
+      } else {
+        setSent(true);
+      }
     } catch (e: any) {
       setError(e.message ?? "Failed to send reset link. Please try again.");
     } finally {
