@@ -1,36 +1,43 @@
 // app/(auth)/forgot-password.tsx
 
-import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  BorderRadius,
+  Colors,
+  FontFamily,
+  Shadow,
+  Spacing,
+} from "@/constants/theme";
+import { auth } from "@/services/firebase";
+import { router } from "expo-router";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
 
   const handleSendReset = async () => {
     if (!email.trim()) {
-      setError('Please enter your email address.');
+      setError("Please enter your email address.");
       return;
     }
-    setError('');
+    setError("");
     setLoading(true);
     try {
-      // TODO: call Firebase sendPasswordResetEmail(auth, email) here
+      await (auth as any).sendPasswordResetEmail(email.trim());
       setSent(true);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to send reset link. Please try again.');
+      setError(e.message ?? "Failed to send reset link. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -39,8 +46,6 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-
-        {/* ── Header ── */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>ENGITRIAD</Text>
           <Text style={styles.tagline}>THE POWER OF THREE. APPLIED</Text>
@@ -48,22 +53,20 @@ export default function ForgotPasswordScreen() {
 
         <View style={styles.spacer} />
 
-        {/* ── Card content ── */}
         <View style={styles.content}>
           <Text style={styles.screenTitle}>Reset Password</Text>
           <Text style={styles.description}>
-            Enter the email address linked to your account and we'll send you a reset link.
+            Enter the email address linked to your account and we will send you
+            a reset link.
           </Text>
 
           {sent ? (
-            /* ── Success state ── */
             <View style={styles.successBox}>
               <Text style={styles.successText}>
                 Reset link sent! Check your inbox and follow the instructions.
               </Text>
             </View>
           ) : (
-            /* ── Form state ── */
             <>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email Address</Text>
@@ -97,7 +100,6 @@ export default function ForgotPasswordScreen() {
             </>
           )}
 
-          {/* ── Back to login ── */}
           <TouchableOpacity
             style={styles.backWrapper}
             onPress={() => router.back()}
@@ -106,30 +108,21 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.backText}>Return to login</Text>
           </TouchableOpacity>
         </View>
-
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.background },
   container: {
     flex: 1,
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.xxl,
     paddingBottom: Spacing.xxl,
-    alignItems: 'center',
+    alignItems: "center",
   },
-
-  // ── Header ──
-  header: {
-    alignItems: 'center',
-    marginTop: Spacing.xxl,
-  },
+  header: { alignItems: "center", marginTop: Spacing.xxl },
   appTitle: {
     fontFamily: FontFamily.bold,
     fontSize: 36,
@@ -143,15 +136,8 @@ const styles = StyleSheet.create({
     color: Colors.tagline,
     marginTop: Spacing.xs,
   },
-
-  spacer: {
-    height: 60,
-  },
-
-  // ── Content ──
-  content: {
-    width: '100%',
-  },
+  spacer: { height: 60 },
+  content: { width: "100%" },
   screenTitle: {
     fontFamily: FontFamily.bold,
     fontSize: 22,
@@ -165,11 +151,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: Spacing.xl,
   },
-
-  // ── Input ──
-  inputGroup: {
-    marginBottom: Spacing.md,
-  },
+  inputGroup: { marginBottom: Spacing.md },
   inputLabel: {
     fontFamily: FontFamily.regular,
     fontSize: 13,
@@ -186,8 +168,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     color: Colors.textInput,
   },
-
-  // ── Error ──
   errorText: {
     fontFamily: FontFamily.regular,
     fontSize: 13,
@@ -195,27 +175,21 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     marginLeft: Spacing.sm,
   },
-
-  // ── Reset button ──
   resetButton: {
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.pill,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: Spacing.sm,
     ...Shadow.button,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
+  buttonDisabled: { opacity: 0.7 },
   resetButtonText: {
     fontFamily: FontFamily.semiBold,
     fontSize: 16,
     color: Colors.textOnPrimary,
     letterSpacing: 0.5,
   },
-
-  // ── Success box ──
   successBox: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
@@ -230,12 +204,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 22,
   },
-
-  // ── Back link ──
-  backWrapper: {
-    alignItems: 'center',
-    marginTop: Spacing.xl,
-  },
+  backWrapper: { alignItems: "center", marginTop: Spacing.xl },
   backText: {
     fontFamily: FontFamily.regular,
     fontSize: 15,
