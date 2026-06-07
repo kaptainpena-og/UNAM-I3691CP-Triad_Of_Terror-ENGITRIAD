@@ -1,10 +1,8 @@
 // services/firebase.ts
-
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration using Expo environment variables
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,9 +12,8 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase App
+console.log("Firebase Config:", firebaseConfig);
 const app = initializeApp(firebaseConfig);
 
-// Initialize and export Authentication and Firestore services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
