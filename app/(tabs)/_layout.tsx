@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -31,38 +31,38 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="house.fill" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="corrosion/index"
+        name="corrosion"
         options={{
           title: 'Corrosion',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="shield.fill" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="shield" size={size} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="blast/index"
+        name="blast"
         options={{
           title: 'Blast',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="flame.fill" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flame" size={size} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="concrete/index"
+        name="concrete"
         options={{
           title: 'Concrete',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="cube.fill" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cube" size={size} color={color} />
           ),
         }}
       />
