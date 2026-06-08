@@ -29,16 +29,26 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!trimmedEmail || !password.trim()) {
       Alert.alert("Validation Error", "Please enter both email and password.");
       return;
     }
+
+    if (!emailRegex.test(trimmedEmail)) {
+      Alert.alert("Validation Error", "Please enter a valid engineering email address.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(trimmedEmail, password);
     } catch (error: any) {
       Alert.alert(
         "Login Failed",
@@ -77,6 +87,8 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
                 value={email}
                 onChangeText={setEmail}
               />
@@ -84,16 +96,29 @@ export default function LoginScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>PASSWORD</Text>
-              <TextInput
-                style={styles.pillInput}
-                placeholder="••••••••"
-                placeholderTextColor={Colors.textPlaceholder}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  placeholderTextColor={Colors.textPlaceholder}
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  style={styles.toggleVisibilityButton}
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.toggleVisibilityText}>
+                    {isPasswordVisible ? "HIDE" : "SHOW"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Forgot password link */}
@@ -180,6 +205,31 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     fontSize: 15,
     color: Colors.textInput,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    backgroundColor: Colors.inputBackground,
+    borderRadius: BorderRadius.pill,
+    alignItems: "center",
+    paddingRight: Spacing.lg,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 14,
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
+    color: Colors.textInput,
+  },
+  toggleVisibilityButton: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  toggleVisibilityText: {
+    fontFamily: FontFamily.bold,
+    fontSize: 11,
+    color: Colors.textInput,
+    letterSpacing: 0.5,
   },
   forgotWrapper: { alignSelf: "flex-end", marginTop: 4, marginBottom: 8 },
   forgotText: {
