@@ -121,12 +121,13 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Forgot password link */}
-            <TouchableOpacity
-              onPress={() => router.push("/(auth)/forgot-password")}
-              style={styles.forgotWrapper}
+            {/* FORGOT PASSWORD ANCHOR BUTTON */}
+            <TouchableOpacity 
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={styles.forgotPasswordContainer}
+              activeOpacity={0.7}
             >
-              <Text style={styles.forgotText}>Forgot password?</Text>
+              <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -206,36 +207,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textInput,
   },
-  passwordContainer: {
-    flexDirection: "row",
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.pill,
-    alignItems: "center",
-    paddingRight: Spacing.lg,
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 14,
-    fontFamily: FontFamily.regular,
-    fontSize: 15,
-    color: Colors.textInput,
-  },
-  toggleVisibilityButton: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  toggleVisibilityText: {
-    fontFamily: FontFamily.bold,
-    fontSize: 11,
-    color: Colors.textInput,
-    letterSpacing: 0.5,
-  },
-  forgotWrapper: { alignSelf: "flex-end", marginTop: 4, marginBottom: 8 },
-  forgotText: {
+  forgotPasswordLink: {
     fontFamily: FontFamily.medium,
+    color: Colors.textMuted,
     fontSize: 13,
-    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
   primaryButton: {
     backgroundColor: Colors.primary,

@@ -1,24 +1,20 @@
 // app/(auth)/forgot-password.tsx
 
-import {
-  BorderRadius,
-  Colors,
-  FontFamily,
-  Shadow,
-  Spacing,
-} from "@/constants/theme";
-import { auth } from "@/services/firebase";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
+import { auth } from '@/services/firebase';
+import { router } from 'expo-router';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -33,28 +29,25 @@ export default function ForgotPasswordScreen() {
     }
     setError("");
     setLoading(true);
+    
     try {
-      // Firebase REST API — works with any Firebase version
-      const apiKey = (auth.app.options as any).apiKey;
-      const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requestType: "PASSWORD_RESET",
-            email: email.trim(),
-          }),
-        },
+      // 1. Fire the actual network request to Firebase cloud systems
+      await sendPasswordResetEmail(auth, email.trim());
+      
+      // 2. Pop up an immediate alert to confirm the cloud acknowledged it
+      Alert.alert(
+        'Firebase Server Success', 
+        `A request was accepted for: ${email.trim()}\n\nIf this email is a valid password account in your console, the delivery layer has dispatched it.`
       );
-      const data = await response.json();
-      if (data.error) {
-        setError(data.error.message ?? "Failed to send reset link.");
-      } else {
-        setSent(true);
-      }
+      
+      setSent(true);
     } catch (e: any) {
-      setError(e.message ?? "Failed to send reset link. Please try again.");
+      // 3. If Firebase rejects the request, instantly capture and display the exact code
+      Alert.alert(
+        'Raw Debug Error', 
+        `Code: ${e.code || 'UNKNOWN'}\nMessage: ${e.message || 'No direct error message string available.'}`
+      );
+      setError(e.message ?? 'Failed to send reset link. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -91,12 +84,14 @@ export default function ForgotPasswordScreen() {
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder=""
+                  placeholder="engineer@domain.com"
                   placeholderTextColor={Colors.textPlaceholder}
                   autoCapitalize="none"
+                  autoCorrect={false}
                   keyboardType="email-address"
                   returnKeyType="done"
                   onSubmitEditing={handleSendReset}
+                  editable={!loading}
                 />
               </View>
 
@@ -137,7 +132,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.xxl,
     paddingBottom: Spacing.xxl,
-    alignItems: "center",
+    alignItems: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginTop: Spacing.xxl,
   },
   header: { alignItems: "center", marginTop: Spacing.xxl },
   appTitle: {
@@ -153,8 +152,12 @@ const styles = StyleSheet.create({
     color: Colors.tagline,
     marginTop: Spacing.xs,
   },
-  spacer: { height: 60 },
-  content: { width: "100%" },
+  spacer: {
+    height: 60,
+  },
+  content: {
+    width: '100%',
+  },
   screenTitle: {
     fontFamily: FontFamily.bold,
     fontSize: 22,
@@ -168,7 +171,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: Spacing.xl,
   },
-  inputGroup: { marginBottom: Spacing.md },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
   inputLabel: {
     fontFamily: FontFamily.regular,
     fontSize: 13,
@@ -221,7 +226,10 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 22,
   },
-  backWrapper: { alignItems: "center", marginTop: Spacing.xl },
+  backWrapper: {
+    alignItems: 'center',
+    marginTop: Spacing.xl,
+  },
   backText: {
     fontFamily: FontFamily.regular,
     fontSize: 15,
