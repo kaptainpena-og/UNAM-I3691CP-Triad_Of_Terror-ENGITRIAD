@@ -207,7 +207,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textInput,
   },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF", 
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: Spacing.lg,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
+    color: Colors.textInput,
+  },
+  toggleVisibilityButton: {
+    paddingLeft: Spacing.sm,
+  },
+  toggleVisibilityText: {
+    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    color: Colors.primary,
+  },
   forgotPasswordContainer: {
+    borderRadius: BorderRadius.pill,
     alignSelf: 'flex-end',
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
