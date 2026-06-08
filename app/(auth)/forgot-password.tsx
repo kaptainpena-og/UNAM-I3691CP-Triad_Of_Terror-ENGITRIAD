@@ -17,17 +17,17 @@ import {
 } from 'react-native';
 
 export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
 
   const handleSendReset = async () => {
     if (!email.trim()) {
-      setError('Please enter your email address.');
+      setError("Please enter your email address.");
       return;
     }
-    setError('');
+    setError("");
     setLoading(true);
     
     try {
@@ -56,8 +56,6 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-
-        {/* ── Header ── */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>ENGITRIAD</Text>
           <Text style={styles.tagline}>THE POWER OF THREE. APPLIED</Text>
@@ -65,22 +63,20 @@ export default function ForgotPasswordScreen() {
 
         <View style={styles.spacer} />
 
-        {/* ── Card content ── */}
         <View style={styles.content}>
           <Text style={styles.screenTitle}>Reset Password</Text>
           <Text style={styles.description}>
-            Enter the email address linked to your account and we'll send you a reset link.
+            Enter the email address linked to your account and we will send you
+            a reset link.
           </Text>
 
           {sent ? (
-            /* ── Success state ── */
             <View style={styles.successBox}>
               <Text style={styles.successText}>
                 Reset link sent! Check your inbox and follow the instructions.
               </Text>
             </View>
           ) : (
-            /* ── Form state ── */
             <>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email Address</Text>
@@ -116,7 +112,6 @@ export default function ForgotPasswordScreen() {
             </>
           )}
 
-          {/* ── Back to login ── */}
           <TouchableOpacity
             style={styles.backWrapper}
             onPress={() => router.back()}
@@ -125,17 +120,13 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.backText}>Return to login</Text>
           </TouchableOpacity>
         </View>
-
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.background },
   container: {
     flex: 1,
     paddingHorizontal: Spacing.xl,
@@ -147,6 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.xxl,
   },
+  header: { alignItems: "center", marginTop: Spacing.xxl },
   appTitle: {
     fontFamily: FontFamily.bold,
     fontSize: 36,
@@ -209,13 +201,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.pill,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: Spacing.sm,
     ...Shadow.button,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
+  buttonDisabled: { opacity: 0.7 },
   resetButtonText: {
     fontFamily: FontFamily.semiBold,
     fontSize: 16,
