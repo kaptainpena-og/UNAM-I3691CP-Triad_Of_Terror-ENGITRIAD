@@ -1,4 +1,12 @@
 // app/(tabs)/concrete/index.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// ENHANCED Concrete Slab Calculator
+//   Inputs  : Project name, slab type, concrete grade, dimensions,
+//             waste factor, reinforcement steel density
+//   Outputs : Net/ordered volume, full material breakdown (cement, sand,
+//             aggregate, water), rebar weight, formwork area, mix ratios
+//   Saves to Firestore and navigates to results screen
+// ─────────────────────────────────────────────────────────────────────────────
 
 import { Colors, FontFamily } from "@/constants/theme";
 import { auth, db } from "@/services/firebase";
@@ -18,7 +26,99 @@ import {
 
 const GRADES = ["C20", "C25", "C30"];
 
-export default function ConcreteMixerScreen() {
+const GRADES = ['C20', 'C25', 'C30', 'C35'] as const;
+type Grade = typeof GRADES[number];
+
+const SLAB_TYPES = ['Ground Slab', 'Suspended Slab', 'Roof Slab'] as const;
+type SlabType = typeof SLAB_TYPES[number];
+
+// Mix design per grade: { cementKgM3, sandKgM3, aggKgM3, wcRatio, mixLabel }
+const MIX_DESIGN: Record<Grade, {
+  cement: number; sand: number; agg: number; water: number; ratio: string;
+}> = {
+  C20: { cement: 320, sand: 700,  agg: 1200, water: 192, ratio: '1 : 2 : 4'   },
+  C25: { cement: 360, sand: 680,  agg: 1100, water: 198, ratio: '1 : 1.5 : 3' },
+  C30: { cement: 400, sand: 620,  agg: 1100, water: 200, ratio: '1 : 1 : 2'   },
+  C35: { cement: 450, sand: 600,  agg: 1000, water: 202, ratio: '1 : 0.8 : 1.6'},
+};
+
+// Reinforcement presets (kg/m³)
+const REBAR_PRESETS = [
+  { label: 'None',   value: 0   },
+  { label: 'Light',  value: 70  },
+  { label: 'Medium', value: 100 },
+  { label: 'Heavy',  value: 140 },
+] as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Results {
+  areaPerSlab:   number;
+  totalArea:     number;
+  netVolume:     number;
+  wasteVolume:   number;
+  orderedVolume: number;
+  cement:        number;  // kg
+  sand:          number;  // kg
+  aggregate:     number;  // kg
+  water:         number;  // litres
+  cementBags:    number;  // 50 kg bags
+  rebarKg:       number;
+  rebarTonnes:   number;
+  formworkArea:  number;  // m²
+  grade:         Grade;
+  mixRatio:      string;
+}
+
+// ─── Calculation Engine ───────────────────────────────────────────────────────
+
+function runCalc(
+  thicknessMm: number,
+  length: number,
+  width: number,
+  count: number,
+  wastePct: number,
+  rebarKgM3: number,
+  grade: Grade,
+  slabType: SlabType,
+): Results {
+  const t = thicknessMm / 1000; // convert mm → m
+  const mix = MIX_DESIGN[grade];
+
+  const areaPerSlab   = length * width;
+  const totalArea     = areaPerSlab * count;
+  const netVolume     = t * totalArea;
+  const wasteVolume   = netVolume * (wastePct / 100);
+  const orderedVolume = netVolume + wasteVolume;
+
+  const cement    = mix.cement    * orderedVolume;
+  const sand      = mix.sand      * orderedVolume;
+  const aggregate = mix.agg       * orderedVolume;
+  const water     = mix.water     * orderedVolume;
+  const cementBags = Math.ceil(cement / 50);
+
+  const rebarKg     = rebarKgM3 * netVolume;
+  const rebarTonnes = rebarKg / 1000;
+
+  // Formwork: soffit area + edge shuttering (all four sides × thickness)
+  const perimeterPerSlab = 2 * (length + width);
+  const formworkArea =
+    slabType === 'Ground Slab'
+      ? 0                                              // ground slab: no soffit formwork
+      : totalArea + perimeterPerSlab * t * count;      // suspended/roof: soffit + edges
+
+  return {
+    areaPerSlab, totalArea,
+    netVolume, wasteVolume, orderedVolume,
+    cement, sand, aggregate, water, cementBags,
+    rebarKg, rebarTonnes, formworkArea,
+    grade, mixRatio: mix.ratio,
+  };
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function ConcreteSlabScreen() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("C25");
@@ -33,6 +133,8 @@ export default function ConcreteMixerScreen() {
       );
       return;
     }
+    setResults(runCalc(v.t, v.l, v.w, v.n, v.wp, rebarKgM3, grade, slabType));
+  };
 
     const volNumber = parseFloat(volume);
     if (isNaN(volNumber) || volNumber <= 0) {
@@ -42,7 +144,6 @@ export default function ConcreteMixerScreen() {
       );
       return;
     }
-
     const user = auth.currentUser;
     if (!user) {
       Alert.alert(
@@ -53,7 +154,6 @@ export default function ConcreteMixerScreen() {
     }
 
     setLoading(true);
-
     try {
       const dryVolume = volNumber * 1.54;
 
@@ -87,12 +187,26 @@ export default function ConcreteMixerScreen() {
       const mixData = {
         userId: user.uid,
         projectName: projectName.trim(),
-        concreteGrade: selectedGrade,
-        volumeRequired: volNumber,
-        cementQty,
-        sandQty,
-        aggregateQty,
-        waterQty,
+        slabType,
+        concreteGrade: grade,
+        mixRatio: r.mixRatio,
+        thicknessMm: v.t,
+        slabLength: v.l,
+        slabWidth: v.w,
+        slabCount: v.n,
+        wasteFactor: v.wp,
+        rebarKgPerM3: rebarKgM3,
+        areaPerSlab: r.areaPerSlab,
+        totalArea: r.totalArea,
+        netVolume: r.netVolume,
+        orderedVolume: r.orderedVolume,
+        cementKg: r.cement,
+        cementBags: r.cementBags,
+        sandKg: r.sand,
+        aggregateKg: r.aggregate,
+        waterLitres: r.water,
+        rebarKg: r.rebarKg,
+        formworkArea: r.formworkArea,
         createdAt: serverTimestamp(),
       };
 
@@ -136,6 +250,7 @@ export default function ConcreteMixerScreen() {
     }
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <ScrollView
       style={styles.container}
@@ -199,11 +314,15 @@ export default function ConcreteMixerScreen() {
         onPress={calculateAndSave}
         disabled={loading}
       >
-        {loading ? (
-          <ActivityIndicator color={Colors.background} />
-        ) : (
-          <Text style={styles.buttonText}>Calculate & Save</Text>
-        )}
+        {loading
+          ? <ActivityIndicator color={Colors.textOnPrimary} />
+          : <Text style={styles.saveBtnText}>Save Calculation</Text>
+        }
+      </TouchableOpacity>
+
+      {/* Return link */}
+      <TouchableOpacity style={styles.backWrapper} onPress={() => router.push('/(tabs)/departments')}>
+        <Text style={styles.backText}>Return to departments</Text>
       </TouchableOpacity>
 
       <View style={styles.disclaimerContainer}>
@@ -217,6 +336,42 @@ export default function ConcreteMixerScreen() {
   );
 }
 
+// ─── Small reusable components ────────────────────────────────────────────────
+
+const SectionHeader = ({ label }: { label: string }) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionHeaderText}>{label}</Text>
+  </View>
+);
+
+const SubHeader = ({ text }: { text: string }) => (
+  <Text style={styles.subHeader}>{text}</Text>
+);
+
+const FieldLabel = ({ text }: { text: string }) => (
+  <Text style={styles.fieldLabel}>{text}</Text>
+);
+
+const Divider = () => <View style={styles.divider} />;
+
+const HeroStat = ({ label, value }: { label: string; value: string }) => (
+  <View style={styles.heroStat}>
+    <Text style={styles.heroValue}>{value}</Text>
+    <Text style={styles.heroLabel}>{label}</Text>
+  </View>
+);
+
+const ResultRow = ({
+  label, value, accent = false,
+}: { label: string; value: string; accent?: boolean }) => (
+  <View style={styles.resultRow}>
+    <Text style={styles.resultLabel}>{label}</Text>
+    <Text style={[styles.resultValue, accent && styles.resultAccent]}>{value}</Text>
+  </View>
+);
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   contentContainer: { padding: 24 },
@@ -226,11 +381,12 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     marginBottom: 8,
   },
-  subTitle: {
-    fontFamily: FontFamily.regular,
-    fontSize: 16,
-    color: Colors.textMuted,
-    marginBottom: 32,
+
+  // Section header
+  sectionHeader: {
+    marginTop: Spacing.lg, marginBottom: Spacing.sm,
+    borderLeftWidth: 3, borderLeftColor: Colors.primary,
+    paddingLeft: 10,
   },
   inputGroup: { marginBottom: 20 },
   label: {
@@ -239,16 +395,23 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 8,
   },
+
+  // Inputs
   input: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    fontFamily: FontFamily.regular,
-    color: Colors.text,
+    borderWidth: 1, borderColor: Colors.border,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.md, paddingVertical: 13,
+    fontSize: 15, fontFamily: FontFamily.regular,
+    color: Colors.text, backgroundColor: Colors.surface,
+    marginBottom: Spacing.md,
+  },
+  inputReadOnly: {
+    borderWidth: 1, borderColor: Colors.border,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.md, paddingVertical: 13,
     backgroundColor: Colors.background,
+    marginBottom: Spacing.md,
+    justifyContent: 'center',
   },
   gradeContainer: { flexDirection: "row", justifyContent: "space-between" },
   gradeButton: {
@@ -261,14 +424,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.background,
   },
-  gradeButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  pillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  pillText: {
+    fontFamily: FontFamily.medium, fontSize: 13,
+    color: Colors.textMuted, textAlign: 'center',
   },
-  gradeText: {
-    fontFamily: FontFamily.medium,
-    color: Colors.text,
-    fontSize: 16,
+  pillTextActive: { color: Colors.textOnPrimary },
+
+  // Info chip
+  infoChip: {
+    backgroundColor: '#0A2150', borderRadius: BorderRadius.sm,
+    paddingVertical: 8, paddingHorizontal: 12, marginBottom: Spacing.md,
+    borderLeftWidth: 2, borderLeftColor: Colors.tagline,
   },
   gradeTextActive: { color: Colors.textOnPrimary },
   primaryButton: {
