@@ -1,16 +1,19 @@
 // app/(auth)/forgot-password.tsx
 
 import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
+import { auth } from '@/services/firebase';
 import { router } from 'expo-router';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ForgotPasswordScreen() {
@@ -26,10 +29,24 @@ export default function ForgotPasswordScreen() {
     }
     setError('');
     setLoading(true);
+    
     try {
-      // TODO: call Firebase sendPasswordResetEmail(auth, email) here
+      // 1. Fire the actual network request to Firebase cloud systems
+      await sendPasswordResetEmail(auth, email.trim());
+      
+      // 2. Pop up an immediate alert to confirm the cloud acknowledged it
+      Alert.alert(
+        'Firebase Server Success', 
+        `A request was accepted for: ${email.trim()}\n\nIf this email is a valid password account in your console, the delivery layer has dispatched it.`
+      );
+      
       setSent(true);
     } catch (e: any) {
+      // 3. If Firebase rejects the request, instantly capture and display the exact code
+      Alert.alert(
+        'Raw Debug Error', 
+        `Code: ${e.code || 'UNKNOWN'}\nMessage: ${e.message || 'No direct error message string available.'}`
+      );
       setError(e.message ?? 'Failed to send reset link. Please try again.');
     } finally {
       setLoading(false);
@@ -71,12 +88,14 @@ export default function ForgotPasswordScreen() {
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder=""
+                  placeholder="engineer@domain.com"
                   placeholderTextColor={Colors.textPlaceholder}
                   autoCapitalize="none"
+                  autoCorrect={false}
                   keyboardType="email-address"
                   returnKeyType="done"
                   onSubmitEditing={handleSendReset}
+                  editable={!loading}
                 />
               </View>
 
@@ -124,8 +143,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
     alignItems: 'center',
   },
-
-  // ── Header ──
   header: {
     alignItems: 'center',
     marginTop: Spacing.xxl,
@@ -143,12 +160,9 @@ const styles = StyleSheet.create({
     color: Colors.tagline,
     marginTop: Spacing.xs,
   },
-
   spacer: {
     height: 60,
   },
-
-  // ── Content ──
   content: {
     width: '100%',
   },
@@ -165,8 +179,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: Spacing.xl,
   },
-
-  // ── Input ──
   inputGroup: {
     marginBottom: Spacing.md,
   },
@@ -186,8 +198,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     color: Colors.textInput,
   },
-
-  // ── Error ──
   errorText: {
     fontFamily: FontFamily.regular,
     fontSize: 13,
@@ -195,8 +205,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     marginLeft: Spacing.sm,
   },
-
-  // ── Reset button ──
   resetButton: {
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.pill,
@@ -214,8 +222,6 @@ const styles = StyleSheet.create({
     color: Colors.textOnPrimary,
     letterSpacing: 0.5,
   },
-
-  // ── Success box ──
   successBox: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
@@ -230,8 +236,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 22,
   },
-
-  // ── Back link ──
   backWrapper: {
     alignItems: 'center',
     marginTop: Spacing.xl,
