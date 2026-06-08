@@ -1,8 +1,8 @@
 // app/(tabs)/blast/index.tsx
 
-import { Colors, FontFamily } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Colors, FontFamily } from "@/constants/theme";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -10,28 +10,25 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
 
 export default function NewBlastScreen() {
   const router = useRouter();
 
-  // Form States (Pre-populated with your exact Figma design values for testing)
-  const [blastLocation, setBlastLocation] = useState('Block C – Zone 4 (GPS)');
-  const [date, setDate] = useState('14/05/2025');
-  const [time, setTime] = useState('09:30');
-  const [explosiveType, setExplosiveType] = useState('ANFO');
-  const [holeDepth, setHoleDepth] = useState('8.5');
-  const [chargePerHole, setChargePerHole] = useState('18.0');
-  const [holesDelay, setHolesDelay] = useState('4');
-  const [distance, setDistance] = useState('180');
-  const [kConstant, setKConstant] = useState('682');
-  const [alphaConstant, setAlphaConstant] = useState('1.6');
-
-  // Computed State
+  const [blastLocation, setBlastLocation] = useState("Block C – Zone 4 (GPS)");
+  const [date, setDate] = useState("14/05/2025");
+  const [time, setTime] = useState("09:30");
+  const [explosiveType, setExplosiveType] = useState("ANFO");
+  const [holeDepth, setHoleDepth] = useState("8.5");
+  const [chargePerHole, setChargePerHole] = useState("18.0");
+  const [holesDelay, setHolesDelay] = useState("4");
+  const [distance, setDistance] = useState("180");
+  const [kConstant, setKConstant] = useState("682");
+  const [alphaConstant, setAlphaConstant] = useState("1.6");
   const [cpd, setCpd] = useState(72);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Automatically calculate CPD when dependent parameters change
   useEffect(() => {
     const q = parseFloat(chargePerHole) || 0;
     const n = parseFloat(holesDelay) || 0;
@@ -39,9 +36,32 @@ export default function NewBlastScreen() {
   }, [chargePerHole, holesDelay]);
 
   const handleCalculatePPV = () => {
-    // Navigate to results page passing all structural calculation inputs
+    const newErrors: Record<string, string> = {};
+
+    if (!blastLocation.trim()) {
+      newErrors.blastLocation = "Blast location is required.";
+    }
+    const chg = parseFloat(chargePerHole);
+    if (isNaN(chg) || chg <= 0) {
+      newErrors.chargePerHole = "Charge per hole must be greater than 0.";
+    }
+    const hd = parseFloat(holesDelay);
+    if (isNaN(hd) || hd <= 0) {
+      newErrors.holesDelay = "Holes per delay must be greater than 0.";
+    }
+    const dist = parseFloat(distance);
+    if (isNaN(dist) || dist <= 0) {
+      newErrors.distance = "Distance must be greater than 0.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     router.push({
-      pathname: '/(tabs)/blast/results',
+      pathname: "/(tabs)/blast/results",
       params: {
         blastLocation,
         date,
@@ -53,14 +73,13 @@ export default function NewBlastScreen() {
         distance,
         kConstant,
         alphaConstant,
-        cpd: cpd.toString()
-      }
+        cpd: cpd.toString(),
+      },
     });
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Custom Figma Header Navbar */}
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuIconBar}>≡</Text>
@@ -71,22 +90,29 @@ export default function NewBlastScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        
-        {/* SECTION 1: LOCATION & TIME */}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.cardSection}>
           <Text style={styles.sectionHeader}>📍 LOCATION & TIME</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.fieldLabel}>BLAST LOCATION</Text>
             <View style={styles.inputWithIconContainer}>
               <Text style={styles.inlineIcon}>⛏️</Text>
               <TextInput
-                style={[styles.input, { paddingLeft: 36, color: Colors.primary }]}
+                style={[
+                  styles.input,
+                  { paddingLeft: 36, color: Colors.primary },
+                ]}
                 value={blastLocation}
                 onChangeText={setBlastLocation}
               />
             </View>
+            {!!errors.blastLocation && (
+              <Text style={styles.errorText}>{errors.blastLocation}</Text>
+            )}
           </View>
 
           <View style={styles.row}>
@@ -109,7 +135,6 @@ export default function NewBlastScreen() {
           </View>
         </View>
 
-        {/* SECTION 2: EXPLOSIVE PARAMETERS */}
         <View style={styles.cardSection}>
           <Text style={styles.sectionHeader}>💣 EXPLOSIVE PARAMETERS</Text>
 
@@ -140,6 +165,9 @@ export default function NewBlastScreen() {
                 value={chargePerHole}
                 onChangeText={setChargePerHole}
               />
+              {!!errors.chargePerHole && (
+                <Text style={styles.errorText}>{errors.chargePerHole}</Text>
+              )}
             </View>
           </View>
 
@@ -152,6 +180,9 @@ export default function NewBlastScreen() {
                 value={holesDelay}
                 onChangeText={setHolesDelay}
               />
+              {!!errors.holesDelay && (
+                <Text style={styles.errorText}>{errors.holesDelay}</Text>
+              )}
             </View>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.fieldLabel}>DISTANCE [m]</Text>
@@ -161,11 +192,13 @@ export default function NewBlastScreen() {
                 value={distance}
                 onChangeText={setDistance}
               />
+              {!!errors.distance && (
+                <Text style={styles.errorText}>{errors.distance}</Text>
+              )}
             </View>
           </View>
         </View>
 
-        {/* SECTION 3: CPD PREVIEW */}
         <View style={styles.cardSection}>
           <Text style={styles.sectionHeader}>🔢 CPD PREVIEW</Text>
           <View style={styles.cpdRow}>
@@ -179,7 +212,6 @@ export default function NewBlastScreen() {
           </View>
         </View>
 
-        {/* SECTION 4: SITE CONSTANTS */}
         <View style={styles.cardSection}>
           <Text style={styles.sectionHeader}>⚙️ SITE CONSTANTS</Text>
           <View style={styles.row}>
@@ -202,144 +234,119 @@ export default function NewBlastScreen() {
               />
             </View>
           </View>
-
           <View style={styles.warningContainer}>
             <Text style={styles.warningText}>
-              ⚠️ Using default site constants. Update with calibrated values from site regression analysis.
+              ⚠️ Using default site constants. Update with calibrated values
+              from site regression analysis.
             </Text>
           </View>
         </View>
 
-        {/* MAIN CALL TO ACTION ACTION BUTTON */}
-        <TouchableOpacity style={styles.calculateButton} onPress={handleCalculatePPV}>
+        <TouchableOpacity
+          style={styles.calculateButton}
+          onPress={handleCalculatePPV}
+        >
           <Text style={styles.calculateButtonText}>CALCULATE PPV →</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#02153A', // Direct deep Navy background matching design system context
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#02153A',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  safeArea: { flex: 1, backgroundColor: "#02153A" },
+  container: { flex: 1, backgroundColor: "#02153A" },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: "rgba(255,255,255,0.05)",
   },
   menuButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderRadius: 6,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  menuIconBar: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  menuIconBar: { color: "#FFFFFF", fontSize: 24, fontWeight: "bold" },
   headerTitle: {
     fontFamily: FontFamily.bold,
     fontSize: 20,
-    color: '#00BCD4', // Precise cyan tint used in design accents
+    color: "#00BCD4",
     letterSpacing: 1,
   },
   saveCircleButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  saveIcon: {
-    fontSize: 18,
-  },
+  saveIcon: { fontSize: 18 },
   cardSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)', // Tinted transparent card base layers
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 14,
     padding: 16,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: "rgba(255,255,255,0.03)",
   },
   sectionHeader: {
     fontFamily: FontFamily.bold,
     fontSize: 12,
-    color: Colors.primary, // #DDA131 Amber token
+    color: Colors.primary,
     marginBottom: 14,
     letterSpacing: 0.5,
   },
-  inputGroup: {
-    marginBottom: 14,
-  },
+  inputGroup: { marginBottom: 14 },
   fieldLabel: {
     fontFamily: FontFamily.medium,
     fontSize: 10,
-    color: '#757575',
+    color: "#757575",
     marginBottom: 6,
   },
-  inputWithIconContainer: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  inlineIcon: {
-    position: 'absolute',
-    left: 12,
-    zIndex: 2,
-    fontSize: 14,
-  },
+  inputWithIconContainer: { position: "relative", justifyContent: "center" },
+  inlineIcon: { position: "absolute", left: 12, zIndex: 2, fontSize: 14 },
   input: {
-    backgroundColor: '#0c1a38',
+    backgroundColor: "#0c1a38",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontFamily: FontFamily.regular,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: "rgba(255,255,255,0.08)",
   },
-  row: {
-    flexDirection: 'row',
+  errorText: {
+    color: "#ef4444",
+    fontSize: 11,
+    marginTop: 4,
+    fontFamily: FontFamily.regular,
   },
+  row: { flexDirection: "row" },
   cpdRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 4,
   },
   formulaText: {
     fontFamily: FontFamily.medium,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   formulaSubText: {
     fontFamily: FontFamily.regular,
     fontSize: 11,
-    color: '#757575',
+    color: "#757575",
     marginTop: 2,
   },
   cpdValue: {
@@ -347,40 +354,31 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: Colors.primary,
   },
-  cpdUnit: {
-    fontSize: 14,
-    fontFamily: FontFamily.regular,
-    color: '#757575',
-  },
+  cpdUnit: { fontSize: 14, fontFamily: FontFamily.regular, color: "#757575" },
   warningContainer: {
-    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+    backgroundColor: "rgba(211,47,47,0.08)",
     borderRadius: 6,
     padding: 10,
     marginTop: 4,
     borderWidth: 1,
-    borderColor: 'rgba(233, 30, 99, 0.15)',
+    borderColor: "rgba(233,30,99,0.15)",
   },
   warningText: {
     fontFamily: FontFamily.regular,
     fontSize: 11,
-    color: '#A0A0A0',
+    color: "#A0A0A0",
     lineHeight: 16,
   },
   calculateButton: {
-    backgroundColor: Colors.primary, // #DDA131 Amber design token
+    backgroundColor: Colors.primary,
     borderRadius: 25,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 28,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
   },
   calculateButtonText: {
     fontFamily: FontFamily.bold,
-    color: '#02153A',
+    color: "#02153A",
     fontSize: 16,
     letterSpacing: 0.5,
   },

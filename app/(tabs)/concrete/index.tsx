@@ -8,11 +8,11 @@
 //   Saves to Firestore and navigates to results screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { BorderRadius, Colors, FontFamily, Shadow, Spacing } from '@/constants/theme';
-import { auth, db } from '@/services/firebase';
-import { useRouter } from 'expo-router';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import React, { useState } from 'react';
+import { Colors, FontFamily } from "@/constants/theme";
+import { auth, db } from "@/services/firebase";
+import { useRouter } from "expo-router";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,9 +22,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const GRADES = ["C20", "C25", "C30"];
 
 const GRADES = ['C20', 'C25', 'C30', 'C35'] as const;
 type Grade = typeof GRADES[number];
@@ -120,66 +120,71 @@ function runCalc(
 
 export default function ConcreteSlabScreen() {
   const router = useRouter();
+  const [projectName, setProjectName] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("C25");
+  const [volume, setVolume] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ── Inputs ──
-  const [projectName, setProjectName] = useState('');
-  const [slabType,    setSlabType]    = useState<SlabType>('Ground Slab');
-  const [grade,       setGrade]       = useState<Grade>('C25');
-  const [thickness,   setThickness]   = useState('');   // mm
-  const [length,      setLength]      = useState('');
-  const [width,       setWidth]       = useState('');
-  const [slabCount,   setSlabCount]   = useState('1');
-  const [wastePct,    setWastePct]    = useState('5');
-  const [rebarKgM3,   setRebarKgM3]   = useState(0);    // from preset
-
-  // ── UI state ──
-  const [results,  setResults]  = useState<Results | null>(null);
-  const [loading,  setLoading]  = useState(false);
-
-  // ── Validation helper ──
-  const parseInputs = () => {
-    const t = parseFloat(thickness);
-    const l = parseFloat(length);
-    const w = parseFloat(width);
-    const n = parseInt(slabCount, 10) || 1;
-    const wp = parseFloat(wastePct) || 5;
-    if (!t || !l || !w || t <= 0 || l <= 0 || w <= 0) return null;
-    return { t, l, w, n, wp };
-  };
-
-  // ── Calculate (preview) ──
-  const handleCalculate = () => {
-    const v = parseInputs();
-    if (!v) {
-      Alert.alert('Validation', 'Please enter valid dimensions before calculating.');
+  const calculateAndSave = async () => {
+    if (!projectName.trim() || !volume.trim()) {
+      Alert.alert(
+        "Validation Error",
+        "Please enter a project name and required volume.",
+      );
       return;
     }
     setResults(runCalc(v.t, v.l, v.w, v.n, v.wp, rebarKgM3, grade, slabType));
   };
 
-  // ── Save to Firestore ──
-  const handleSave = async () => {
-    if (!projectName.trim()) {
-      Alert.alert('Validation', 'Please enter a project name before saving.');
-      return;
-    }
-    const v = parseInputs();
-    if (!v) {
-      Alert.alert('Validation', 'Please enter valid dimensions first.');
+    const volNumber = parseFloat(volume);
+    if (isNaN(volNumber) || volNumber <= 0) {
+      Alert.alert(
+        "Validation Error",
+        "Please enter a valid number for volume greater than 0.",
+      );
       return;
     }
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Auth Error', 'You must be logged in to save calculations.');
+      Alert.alert(
+        "Authentication Error",
+        "You must be logged in to save calculations.",
+      );
       return;
     }
 
     setLoading(true);
     try {
-      const r = runCalc(v.t, v.l, v.w, v.n, v.wp, rebarKgM3, grade, slabType);
-      setResults(r);
+      const dryVolume = volNumber * 1.54;
 
-      await addDoc(collection(db, 'concreteMixes'), {
+      let c = 1,
+        s = 1.5,
+        a = 3,
+        wcRatio = 0.55;
+      if (selectedGrade === "C25") {
+        c = 1;
+        s = 1;
+        a = 2;
+        wcRatio = 0.5;
+      } else if (selectedGrade === "C30") {
+        c = 1;
+        s = 0.75;
+        a = 1.5;
+        wcRatio = 0.45;
+      }
+
+      const totalParts = c + s + a;
+
+      const cementVol = (c / totalParts) * dryVolume;
+      const sandVol = (s / totalParts) * dryVolume;
+      const aggVol = (a / totalParts) * dryVolume;
+
+      const cementQty = Math.round(cementVol * 1440);
+      const sandQty = Math.round(sandVol * 1600);
+      const aggregateQty = Math.round(aggVol * 1500);
+      const waterQty = Math.round(cementQty * wcRatio);
+
+      const mixData = {
         userId: user.uid,
         projectName: projectName.trim(),
         slabType,
@@ -203,19 +208,43 @@ export default function ConcreteSlabScreen() {
         rebarKg: r.rebarKg,
         formworkArea: r.formworkArea,
         createdAt: serverTimestamp(),
-      });
+      };
 
-      Alert.alert('Saved ✓', 'Calculation saved successfully.', [
-        { text: 'View History', onPress: () => router.push('/(tabs)/concrete/results') },
-        { text: 'OK' },
+      const mixesCollection = collection(db, "concreteMixes");
+      await addDoc(mixesCollection, mixData);
+
+      // Build the result object to pass to the results screen
+      const result = {
+        volume: volNumber,
+        cement: cementQty,
+        sand: sandQty,
+        aggregate: aggregateQty,
+        water: waterQty,
+        wbRatio: wcRatio,
+        targetMeanStrength:
+          selectedGrade === "C30" ? 38 : selectedGrade === "C25" ? 33 : 28,
+        concreteGrade: selectedGrade as "C20" | "C25" | "C30",
+      };
+
+      Alert.alert("Success", "Mix calculation saved successfully!", [
+        {
+          text: "View Results",
+          onPress: () =>
+            router.push({
+              pathname: "/(tabs)/concrete/results",
+              params: { result: JSON.stringify(result) },
+            }),
+        },
       ]);
 
-      // Reset
-      setProjectName(''); setThickness(''); setLength('');
-      setWidth(''); setSlabCount('1'); setWastePct('5');
-      setRebarKgM3(0); setResults(null);
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to save.');
+      setProjectName("");
+      setVolume("");
+      setSelectedGrade("C25");
+    } catch (error: any) {
+      Alert.alert(
+        "Database Error",
+        error.message ?? "Failed to save the record.",
+      );
     } finally {
       setLoading(false);
     }
@@ -225,195 +254,64 @@ export default function ConcreteSlabScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.contentContainer}
     >
-      {/* ── Header ── */}
-      <Text style={styles.title}>Concrete Slab{'\n'}Calculator</Text>
-      <Text style={styles.subtitle}>
-        Full material take-off for site engineers.
+      <Text style={styles.headerTitle}>Concrete Mixer</Text>
+      <Text style={styles.subTitle}>
+        Calculate raw material requirements for your site.
       </Text>
 
-      {/* ══ SECTION 1: Project Details ══════════════════════════════════════ */}
-      <SectionHeader label="1. Project Details" />
-
-      <FieldLabel text="Project Name" />
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Block B – Ground Floor"
-        placeholderTextColor={Colors.textPlaceholder}
-        value={projectName}
-        onChangeText={setProjectName}
-      />
-
-      <FieldLabel text="Slab Type" />
-      <View style={styles.pillRow}>
-        {SLAB_TYPES.map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.pill, slabType === t && styles.pillActive]}
-            onPress={() => setSlabType(t)}
-          >
-            <Text style={[styles.pillText, slabType === t && styles.pillTextActive]}>
-              {t}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Project Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Block B Foundation"
+          placeholderTextColor={Colors.textMuted}
+          value={projectName}
+          onChangeText={setProjectName}
+        />
       </View>
 
-      <FieldLabel text="Concrete Grade" />
-      <View style={styles.pillRow}>
-        {GRADES.map(g => (
-          <TouchableOpacity
-            key={g}
-            style={[styles.pill, grade === g && styles.pillActive]}
-            onPress={() => setGrade(g)}
-          >
-            <Text style={[styles.pillText, grade === g && styles.pillTextActive]}>
-              {g}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Mix ratio info chip */}
-      <View style={styles.infoChip}>
-        <Text style={styles.infoChipText}>
-          Mix  {MIX_DESIGN[grade].ratio}  ·  Cement {MIX_DESIGN[grade].cement} kg/m³  ·  W/C ≈ {(MIX_DESIGN[grade].water / MIX_DESIGN[grade].cement).toFixed(2)}
-        </Text>
-      </View>
-
-      {/* ══ SECTION 2: Dimensions ═══════════════════════════════════════════ */}
-      <SectionHeader label="2. Slab Dimensions" />
-
-      <View style={styles.row}>
-        <View style={styles.halfLeft}>
-          <FieldLabel text="Thickness (mm)" />
-          <TextInput style={styles.input} placeholder="e.g. 150"
-            placeholderTextColor={Colors.textPlaceholder}
-            keyboardType="decimal-pad" value={thickness} onChangeText={setThickness} />
-        </View>
-        <View style={styles.halfRight}>
-          <FieldLabel text="No. of Slabs" />
-          <TextInput style={styles.input} placeholder="1"
-            placeholderTextColor={Colors.textPlaceholder}
-            keyboardType="number-pad" value={slabCount} onChangeText={setSlabCount} />
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Concrete Grade</Text>
+        <View style={styles.gradeContainer}>
+          {GRADES.map((grade) => (
+            <TouchableOpacity
+              key={grade}
+              style={[
+                styles.gradeButton,
+                selectedGrade === grade && styles.gradeButtonActive,
+              ]}
+              onPress={() => setSelectedGrade(grade)}
+            >
+              <Text
+                style={[
+                  styles.gradeText,
+                  selectedGrade === grade && styles.gradeTextActive,
+                ]}
+              >
+                {grade}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.halfLeft}>
-          <FieldLabel text="Length (m)" />
-          <TextInput style={styles.input} placeholder="e.g. 8.0"
-            placeholderTextColor={Colors.textPlaceholder}
-            keyboardType="decimal-pad" value={length} onChangeText={setLength} />
-        </View>
-        <View style={styles.halfRight}>
-          <FieldLabel text="Width (m)" />
-          <TextInput style={styles.input} placeholder="e.g. 6.0"
-            placeholderTextColor={Colors.textPlaceholder}
-            keyboardType="decimal-pad" value={width} onChangeText={setWidth} />
-        </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Required Volume (m³)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 15.5"
+          placeholderTextColor={Colors.textMuted}
+          keyboardType="numeric"
+          value={volume}
+          onChangeText={setVolume}
+        />
       </View>
 
-      {/* ══ SECTION 3: Mix Parameters ════════════════════════════════════════ */}
-      <SectionHeader label="3. Mix Parameters" />
-
-      <View style={styles.row}>
-        <View style={styles.halfLeft}>
-          <FieldLabel text="Waste Factor (%)" />
-          <TextInput style={styles.input} placeholder="5"
-            placeholderTextColor={Colors.textPlaceholder}
-            keyboardType="decimal-pad" value={wastePct} onChangeText={setWastePct} />
-        </View>
-        <View style={styles.halfRight}>
-          <FieldLabel text="Ordered Vol = Net + Waste" />
-          <View style={styles.inputReadOnly}>
-            <Text style={styles.inputReadOnlyText}>auto-calculated</Text>
-          </View>
-        </View>
-      </View>
-
-      <FieldLabel text="Reinforcement Steel" />
-      <View style={styles.pillRow}>
-        {REBAR_PRESETS.map(p => (
-          <TouchableOpacity
-            key={p.label}
-            style={[styles.pill, rebarKgM3 === p.value && styles.pillActive]}
-            onPress={() => setRebarKgM3(p.value)}
-          >
-            <Text style={[styles.pillText, rebarKgM3 === p.value && styles.pillTextActive]}>
-              {p.label}{p.value > 0 ? `\n${p.value} kg/m³` : ''}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ══ CALCULATE BUTTON ════════════════════════════════════════════════ */}
-      <TouchableOpacity style={styles.calcBtn} onPress={handleCalculate}>
-        <Text style={styles.calcBtnText}>⟳  Calculate</Text>
-      </TouchableOpacity>
-
-      {/* ══ RESULTS ════════════════════════════════════════════════════════ */}
-      {results && (
-        <View style={styles.resultsCard}>
-
-          {/* Hero */}
-          <View style={styles.heroRow}>
-            <HeroStat label="Ordered Volume" value={`${results.orderedVolume.toFixed(3)} m³`} />
-            <View style={styles.heroDivider} />
-            <HeroStat label="Total Area" value={`${results.totalArea.toFixed(2)} m²`} />
-          </View>
-
-          <Divider />
-
-          {/* Volume breakdown */}
-          <SubHeader text="Volume Breakdown" />
-          <ResultRow label="Net concrete volume"   value={`${results.netVolume.toFixed(3)} m³`} />
-          <ResultRow label={`Waste (${wastePct}%)`} value={`${results.wasteVolume.toFixed(3)} m³`} />
-          <ResultRow label="Volume to order"        value={`${results.orderedVolume.toFixed(3)} m³`} accent />
-
-          <Divider />
-
-          {/* Material quantities */}
-          <SubHeader text="Material Quantities" />
-          <ResultRow label="Cement"    value={`${Math.round(results.cement).toLocaleString()} kg`} />
-          <ResultRow label="Cement bags (50 kg)" value={`${results.cementBags} bags`} accent />
-          <ResultRow label="Sand"      value={`${Math.round(results.sand).toLocaleString()} kg`} />
-          <ResultRow label="Aggregate" value={`${Math.round(results.aggregate).toLocaleString()} kg`} />
-          <ResultRow label="Water"     value={`${Math.round(results.water).toLocaleString()} L`} />
-
-          {/* Rebar */}
-          {results.rebarKg > 0 && (
-            <>
-              <Divider />
-              <SubHeader text="Reinforcement Steel" />
-              <ResultRow label="Total rebar weight" value={`${Math.round(results.rebarKg).toLocaleString()} kg`} />
-              <ResultRow label="Rebar (tonnes)"     value={`${results.rebarTonnes.toFixed(2)} t`} accent />
-            </>
-          )}
-
-          {/* Formwork */}
-          {results.formworkArea > 0 && (
-            <>
-              <Divider />
-              <SubHeader text="Formwork" />
-              <ResultRow label="Formwork area" value={`${results.formworkArea.toFixed(2)} m²`} accent />
-            </>
-          )}
-
-          {/* Per-unit summary */}
-          <Divider />
-          <SubHeader text={`Per Slab  (${results.areaPerSlab.toFixed(2)} m²)`} />
-          <ResultRow label="Volume / slab" value={`${(results.netVolume / (parseInt(slabCount,10)||1)).toFixed(3)} m³`} />
-          <ResultRow label="Cement / slab" value={`${Math.round(results.cement / (parseInt(slabCount,10)||1))} kg`} />
-        </View>
-      )}
-
-      {/* ══ SAVE BUTTON ════════════════════════════════════════════════════ */}
       <TouchableOpacity
-        style={[styles.saveBtn, loading && styles.btnDisabled]}
-        onPress={handleSave}
+        style={[styles.primaryButton, loading && styles.buttonDisabled]}
+        onPress={calculateAndSave}
         disabled={loading}
       >
         {loading
@@ -427,13 +325,11 @@ export default function ConcreteSlabScreen() {
         <Text style={styles.backText}>Return to departments</Text>
       </TouchableOpacity>
 
-      {/* Disclaimer */}
-      <View style={styles.disclaimer}>
+      <View style={styles.disclaimerContainer}>
         <Text style={styles.disclaimerText}>
-          * Indicative estimates only. Cement content and mix proportions follow standard
-          practice (BS 8500 / ACI 211). Bulk densities assumed: cement 1 440 kg/m³,
-          sand 1 600 kg/m³, aggregate 1 500 kg/m³. Always verify with a certified structural
-          engineer before procurement or placement.
+          *Disclaimer: These calculations use standard dry-volume multipliers
+          and assumed bulk densities. They are indicative only and should not be
+          used for final structural safety sign-offs.
         </Text>
       </View>
     </ScrollView>
@@ -478,15 +374,12 @@ const ResultRow = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content:   { padding: Spacing.lg, paddingBottom: Spacing.xxl },
-
-  title: {
-    fontFamily: FontFamily.bold, fontSize: 28,
-    color: Colors.text, lineHeight: 36, marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: FontFamily.regular, fontSize: 14,
-    color: Colors.textMuted, marginBottom: Spacing.lg,
+  contentContainer: { padding: 24 },
+  headerTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: 28,
+    color: Colors.secondary,
+    marginBottom: 8,
   },
 
   // Section header
@@ -495,17 +388,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3, borderLeftColor: Colors.primary,
     paddingLeft: 10,
   },
-  sectionHeaderText: {
-    fontFamily: FontFamily.bold, fontSize: 13,
-    color: Colors.primary, letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-
-  // Field label
-  fieldLabel: {
-    fontFamily: FontFamily.semiBold, fontSize: 12,
-    color: Colors.textMuted, marginBottom: 5,
-    textTransform: 'uppercase', letterSpacing: 0.4,
+  inputGroup: { marginBottom: 20 },
+  label: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: 14,
+    color: Colors.text,
+    marginBottom: 8,
   },
 
   // Inputs
@@ -525,22 +413,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     justifyContent: 'center',
   },
-  inputReadOnlyText: {
-    fontFamily: FontFamily.regular, fontSize: 13,
-    color: Colors.muted, fontStyle: 'italic',
-  },
-
-  row: { flexDirection: 'row' },
-  halfLeft:  { flex: 1, marginRight: 8 },
-  halfRight: { flex: 1, marginLeft: 8  },
-
-  // Pills / selectors
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.md },
-  pill: {
-    borderWidth: 1, borderColor: Colors.border,
-    borderRadius: BorderRadius.sm,
-    paddingVertical: 8, paddingHorizontal: 12,
-    alignItems: 'center', backgroundColor: Colors.surface,
+  gradeContainer: { flexDirection: "row", justifyContent: "space-between" },
+  gradeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    alignItems: "center",
+    backgroundColor: Colors.background,
   },
   pillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   pillText: {
@@ -555,72 +437,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 12, marginBottom: Spacing.md,
     borderLeftWidth: 2, borderLeftColor: Colors.tagline,
   },
-  infoChipText: {
-    fontFamily: FontFamily.regular, fontSize: 12,
-    color: Colors.tagline, letterSpacing: 0.3,
+  gradeTextActive: { color: Colors.textOnPrimary },
+  primaryButton: {
+    backgroundColor: Colors.secondary,
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 12,
   },
-
-  // Calculate button
-  calcBtn: {
-    borderWidth: 1.5, borderColor: Colors.primary,
-    borderRadius: BorderRadius.sm, paddingVertical: 14,
-    alignItems: 'center', marginVertical: Spacing.md,
-    backgroundColor: Colors.surface,
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: {
+    fontFamily: FontFamily.bold,
+    color: Colors.background,
+    fontSize: 16,
   },
-  calcBtnText: {
-    fontFamily: FontFamily.semiBold, fontSize: 16,
-    color: Colors.primary,
-  },
-
-  // Results card
-  resultsCard: {
-    backgroundColor: Colors.surface, borderRadius: BorderRadius.md,
-    padding: Spacing.lg, marginBottom: Spacing.lg,
-    borderLeftWidth: 4, borderLeftColor: Colors.primary,
-    ...Shadow.card,
-  },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-evenly', paddingVertical: Spacing.sm },
-  heroStat: { alignItems: 'center', flex: 1 },
-  heroValue: { fontFamily: FontFamily.bold, fontSize: 22, color: Colors.primary },
-  heroLabel: { fontFamily: FontFamily.regular, fontSize: 11, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
-  heroDivider: { width: 1, backgroundColor: Colors.border },
-
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.sm },
-
-  subHeader: {
-    fontFamily: FontFamily.semiBold, fontSize: 12,
-    color: Colors.textMuted, textTransform: 'uppercase',
-    letterSpacing: 0.5, marginBottom: 6, marginTop: 4,
-  },
-  resultRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  resultLabel: { fontFamily: FontFamily.regular, fontSize: 13, color: Colors.textMuted, flex: 1 },
-  resultValue: { fontFamily: FontFamily.semiBold, fontSize: 13, color: Colors.text },
-  resultAccent: { color: Colors.primary, fontSize: 14 },
-
-  // Save button
-  saveBtn: {
-    backgroundColor: Colors.primary, borderRadius: BorderRadius.sm,
-    paddingVertical: 16, alignItems: 'center',
-    marginBottom: Spacing.md, ...Shadow.button,
-  },
-  btnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontFamily: FontFamily.bold, color: Colors.textOnPrimary, fontSize: 16 },
-
-  // Back link
-  backWrapper: { alignItems: 'center', paddingVertical: Spacing.md },
-  backText: { fontFamily: FontFamily.regular, fontSize: 14, color: Colors.primary },
-
-  // Disclaimer
-  disclaimer: {
-    marginTop: Spacing.md, padding: Spacing.md,
-    backgroundColor: '#1A2E50', borderRadius: BorderRadius.sm,
-    borderLeftWidth: 3, borderLeftColor: Colors.primary,
+  disclaimerContainer: {
+    marginTop: 32,
+    padding: 16,
+    backgroundColor: "#FFF8E1",
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
   },
   disclaimerText: {
-    fontFamily: FontFamily.regular, fontSize: 11,
-    color: Colors.textMuted, lineHeight: 17,
+    fontFamily: FontFamily.regular,
+    fontSize: 12,
+    color: Colors.textMuted,
+    lineHeight: 18,
   },
 });
