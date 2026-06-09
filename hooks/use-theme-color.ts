@@ -1,21 +1,16 @@
-/**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
- */
+// hooks/use-theme-color.ts
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+/**
+ * Simplified theme colour hook.
+ * The EngiTriad design system uses a single flat colour palette (no separate
+ * light / dark sub-objects), so this hook now just returns the caller-supplied
+ * override value (light/dark prop) when provided, otherwise it falls back to a
+ * static default colour passed directly.
+ */
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
-) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props[theme];
-
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
-  }
+  _colorName: string
+): string {
+  return props.light ?? props.dark ?? '#FFFFFF';
 }

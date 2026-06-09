@@ -25,8 +25,8 @@ interface MixResult {
   concreteGrade: ConcreteGrade;
 }
 
-// Grade → minimum characteristic strength (fck) — used for advisory text
-const GRADE_FCK: Record<ConcreteGrade, number> = {
+// Grade → minimum characteristic strength (fck) — reserved for future advisory text expansion
+const _GRADE_FCK: Record<ConcreteGrade, number> = {
   C15: 15, C20: 20, C25: 25, C30: 30, C35: 35, C40: 40,
 };
 

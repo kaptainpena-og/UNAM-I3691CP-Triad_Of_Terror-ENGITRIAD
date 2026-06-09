@@ -36,7 +36,7 @@ export default function CorrosionIndex() {
 
   const [metalType, setMetalType] = useState('Carbon Steel (Fe)');
   const [environmentType, setEnvironmentType] = useState('Immersed / Aqueous');
-  const [corrosionType, setCorrosionType] = useState('Uniform Corrosion');
+  const corrosionType = 'Uniform Corrosion';
   const [pH, setPH] = useState('7.0');
   const [temperature, setTemperature] = useState('25');
   const [chloride, setChloride] = useState('0');
