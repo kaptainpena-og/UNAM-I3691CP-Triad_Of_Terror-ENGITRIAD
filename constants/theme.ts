@@ -32,6 +32,13 @@ export const Colors = {
   border: 'rgba(255, 255, 255, 0.12)', // Subtle border on dark surfaces
   muted: '#4A6080',
   overlay: 'rgba(2, 21, 58, 0.85)',    // Semi-transparent navy overlay
+
+  // BLASTGUARD specific colors
+  safe: '#00D48A',
+  moderate: '#FF8C00',
+  high: '#FF4466',
+  cardDeep: '#141A23',
+  cardMid: '#1A2232',
 };
 
 export const FontFamily = {
