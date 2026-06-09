@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ENGITRIAD",
-    "slug": "ENGITRIAD",
+    "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -26,7 +26,8 @@
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "package": "com.triad_of_terror.engitriad"
     },
     "web": {
       "output": "static",
